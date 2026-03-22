@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Academy</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;700&family=Syne:wght@400;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #05050a;
+      --surface: #0b0b14;
+      --border: #16162a;
+      --cyan: #00e5ff;
+      --purple: #a855f7;
+      --pink: #f72585;
+      --text: #e2e8ff;
+      --muted: #3a3a5c;
+      --card: #0d0d1a;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated background dots */
+    .bg-dots {
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(0,229,255,0.06) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Glow blobs */
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+      animation: drift 12s ease-in-out infinite alternate;
+    }
+
+    .blob-1 {
+      width: 500px; height: 500px;
+      background: rgba(168, 85, 247, 0.08);
+      top: -100px; left: -100px;
+    }
+
+    .blob-2 {
+      width: 400px; height: 400px;
+      background: rgba(0, 229, 255, 0.06);
+      bottom: 100px; right: -80px;
+      animation-delay: -6s;
+    }
+
+    @keyframes drift {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(30px, 30px) scale(1.1); }
+    }
+
+    /* Scanline overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.05) 2px,
+        rgba(0,0,0,0.05) 4px
+      );
+      pointer-events: none;
+      z-index: 200;
+    }
+
+    /* ── Header ─────────────────────────────── */
+    header {
+      position: relative;
+      z-index: 10;
+      padding: 64px 72px 0;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      gap: 40px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--border);
+      background: rgba(0,229,255,0.05);
+      padding: 6px 14px;
+      margin-bottom: 24px;
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--cyan);
+    }
+
+    .chip-dot {
+      width: 6px; height: 6px;
+      background: var(--cyan);
+      border-radius: 50%;
+      animation: blink 1.4s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0; }
+    }
+
+    .title-block h1 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(3rem, 6.5vw, 6rem);
+      line-height: 0.9;
+      letter-spacing: -0.03em;
+    }
+
+    .title-block h1 .line1 { color: var(--text); }
+
+    .title-block h1 .line2 {
+      background: linear-gradient(90deg, var(--cyan), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .title-block .desc {
+      margin-top: 20px;
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* Counter */
+    .counter {
+      text-align: right;
+      padding-top: 8px;
+    }
+
+    .counter .num {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 5rem;
+      line-height: 1;
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .counter .label {
+      font-size: 0.55rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    /* Divider */
+    .divider {
+      position: relative;
+      z-index: 10;
+      margin: 44px 72px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), var(--cyan), var(--border), transparent);
+    }
+
+    /* Controls */
+    .controls {
+      position: relative;
+      z-index: 10;
+      padding: 0 72px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      padding: 9px 18px;
+      transition: border-color 0.2s;
+    }
+
+    .search-box:focus-within {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 1px rgba(0,229,255,0.15);
+    }
+
+    .search-box label {
+      font-size: 0.55rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .search-box input {
+      background: none;
+      border: none;
+      outline: none;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.8rem;
+      color: var(--text);
+      width: 130px;
+    }
+
+    .search-box input::placeholder { color: var(--muted); }
+
+    .view-toggle {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+    }
+
+    .view-btn {
+      background: none;
+      border: 1px solid var(--border);
+      padding: 9px 18px;
+      cursor: pointer;
+      font-size: 0.6rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-family: 'Space Grotesk', sans-serif;
+      transition: all 0.2s;
+    }
+
+    .view-btn.active {
+      background: linear-gradient(135deg, rgba(0,229,255,0.15), rgba(168,85,247,0.15));
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    /* Grid */
+    .grid {
+      position: relative;
+      z-index: 10;
+      padding: 0 64px 100px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    .grid.list-view {
+      grid-template-columns: 1fr;
+      gap: 3px;
+    }
+
+    /* Card */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 30px 24px 26px;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 0.25s, transform 0.25s;
+      animation: fadeIn 0.5s both;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Gradient hover sweep */
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(0,229,255,0.05), rgba(168,85,247,0.05));
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .card:hover { border-color: var(--cyan); transform: translateY(-3px); }
+    .card:hover::before { opacity: 1; }
+
+    /* Top glow line on hover */
+    .card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, var(--cyan), var(--purple));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.35s ease;
+    }
+
+    .card:hover::after { transform: scaleX(1); }
+
+    .card-num {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 2.8rem;
+      line-height: 1;
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .card-tag {
+      font-size: 0.55rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .card-filename {
+      display: none;
+      font-size: 0.62rem;
+      color: var(--muted);
+      margin-top: 10px;
+      word-break: break-all;
+    }
+
+    .card-arrow {
+      position: absolute;
+      bottom: 20px; right: 20px;
+      color: var(--cyan);
+      font-size: 1rem;
+      opacity: 0;
+      transform: translateX(-8px);
+      transition: all 0.25s;
+    }
+
+    .card:hover .card-arrow { opacity: 1; transform: translateX(0); }
+
+    /* Corner bracket */
+    .card-bracket {
+      position: absolute;
+      top: 14px; right: 16px;
+      width: 16px; height: 16px;
+      border-top: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      transition: border-color 0.25s;
+    }
+
+    .card:hover .card-bracket {
+      border-color: var(--purple);
+    }
+
+    /* List view */
+    .list-view .card {
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 40px;
+    }
+
+    .list-view .card-tag { margin-bottom: 0; min-width: 80px; }
+    .list-view .card-num { font-size: 1.6rem; }
+    .list-view .card-filename { display: block; margin-top: 0; flex: 1; }
+    .list-view .card-arrow { position: static; opacity: 0.4; transform: none; }
+    .list-view .card:hover .card-arrow { opacity: 1; }
+    .list-view .card-bracket { display: none; }
+
+    /* Empty */
+    .empty {
+      grid-column: 1/-1;
+      text-align: center;
+      padding: 100px 20px;
+    }
+
+    .empty-icon {
+      font-size: 3.5rem;
+      margin-bottom: 20px;
+      filter: grayscale(1) opacity(0.3);
+    }
+
+    .empty p {
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    /* Footer progress */
+    .footer {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 40px;
+      background: rgba(5,5,10,0.92);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 72px;
+      gap: 24px;
+      z-index: 100;
+    }
+
+    .footer .f-label {
+      font-size: 0.55rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .progress-track {
+      flex: 1;
+      height: 2px;
+      background: var(--border);
+      position: relative;
+      overflow: visible;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan), var(--purple), var(--pink));
+      transition: width 0.9s ease;
+      position: relative;
+    }
+
+    .progress-fill::after {
+      content: '';
+      position: absolute;
+      right: -4px; top: -4px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan), 0 0 24px rgba(0,229,255,0.4);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 8px var(--cyan), 0 0 20px rgba(0,229,255,0.3); }
+      50%       { box-shadow: 0 0 16px var(--cyan), 0 0 40px rgba(0,229,255,0.6); }
+    }
+
+    .footer .f-pct {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: var(--cyan);
+      min-width: 40px;
+      text-align: right;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 56px; right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      padding: 10px 20px;
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s;
+      pointer-events: none;
+      z-index: 999;
+      box-shadow: 0 0 20px rgba(0,229,255,0.15);
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 640px) {
+      header, .controls { padding-left: 20px; padding-right: 20px; }
+      .divider { margin-left: 20px; margin-right: 20px; }
+      .grid { padding-left: 16px; padding-right: 16px; }
+      .footer { padding: 0 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-dots"></div>
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+
+  <header>
+    <div class="title-block">
+      <div class="chip">
+        <span class="chip-dot"></span>
+        Обучение активно
+      </div>
+      <h1>
+        <span class="line1">Изучаю</span><br />
+        <span class="line2">Искусственный<br />Интеллект</span>
+      </h1>
+      <p class="desc">Каждый урок — шаг вперёд &nbsp;·&nbsp; lesson_NN_intro_to_ai.html</p>
+    </div>
+    <div class="counter">
+      <div class="num" id="lessonCount">0</div>
+      <div class="label">уроков пройдено</div>
+    </div>
+  </header>
+
+  <div class="divider"></div>
+
+  <div class="controls">
+    <div class="search-box">
+      <label for="searchInput">Урок №</label>
+      <input id="searchInput" type="text" placeholder="01, 02…" oninput="filterCards()" />
+    </div>
+    <div class="view-toggle">
+      <button class="view-btn active" id="gridBtn" onclick="setView('grid')">Сетка</button>
+      <button class="view-btn" id="listBtn" onclick="setView('list')">Список</button>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="footer">
+    <span class="f-label">Прогресс</span>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+    <span class="f-pct" id="progressPct">0%</span>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const FILE_PREFIX = 'lesson_';
+    const FILE_SUFFIX = '_intro_to_ai';
+    const FILE_EXT    = '.html';
+    const GOAL        = 50;
+
+    let allLessons = [];
+    let currentView = 'grid';
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    async function detectLessons() {
+      const probes = Array.from({ length: 200 }, (_, i) => i + 1).map(i =>
+        fetch(`${FILE_PREFIX}${pad(i)}${FILE_SUFFIX}${FILE_EXT}`, { method: 'HEAD' })
+          .then(r => r.ok ? i : null)
+          .catch(() => null)
+      );
+      return (await Promise.all(probes)).filter(Boolean);
+    }
+
+    function buildCards(lessons) {
+      allLessons = lessons;
+      document.getElementById('lessonCount').textContent = lessons.length;
+      const pct = Math.min(100, Math.round((lessons.length / GOAL) * 100));
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('progressPct').textContent = pct + '%';
+      renderCards(lessons);
+    }
+
+    function renderCards(lessons) {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      if (!lessons.length) {
+        grid.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">🤖</div>
+            <p>Файлы не найдены. Добавьте lesson_01_intro_to_ai.html чтобы начать.</p>
+          </div>`;
+        return;
+      }
+
+      lessons.forEach((n, idx) => {
+        const href = `${FILE_PREFIX}${pad(n)}${FILE_SUFFIX}${FILE_EXT}`;
+        const a = document.createElement('a');
+        a.className = 'card';
+        a.href = href;
+        a.style.animationDelay = `${idx * 35}ms`;
+        a.innerHTML = `
+          <div class="card-bracket"></div>
+          <div class="card-tag">Урок</div>
+          <div class="card-num">${pad(n)}</div>
+          <div class="card-filename">${href}</div>
+          <div class="card-arrow">→</div>
+        `;
+        grid.appendChild(a);
+      });
+
+      if (currentView === 'list') {
+        grid.querySelectorAll('.card-filename').forEach(el => el.style.display = 'block');
+      }
+    }
+
+    function filterCards() {
+      const q = document.getElementById('searchInput').value.trim();
+      renderCards(q ? allLessons.filter(n => pad(n).includes(q) || String(n).includes(q)) : allLessons);
+    }
+
+    function setView(v) {
+      currentView = v;
+      const grid = document.getElementById('grid');
+      const isList = v === 'list';
+      grid.classList.toggle('list-view', isList);
+      grid.querySelectorAll('.card-filename').forEach(el => {
+        el.style.display = isList ? 'block' : 'none';
+      });
+      document.getElementById('listBtn').classList.toggle('active', isList);
+      document.getElementById('gridBtn').classList.toggle('active', !isList);
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2800);
+    }
+
+    (async () => {
+      const lessons = await detectLessons();
+      buildCards(lessons);
+      if (lessons.length) {
+        showToast(`✓ Загружено уроков: ${lessons.length}`);
+      }
+    })();
+  </script>
+</body>
+</html>

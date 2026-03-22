@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>День 1 — Путь к собственной ИИ-модели</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=JetBrains+Mono:wght@300;400;600&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0a0c0f;
+    --surface:  #111418;
+    --card:     #161b22;
+    --border:   #21262d;
+    --accent:   #f0c040;
+    --accent2:  #4fc3f7;
+    --accent3:  #a78bfa;
+    --danger:   #f87171;
+    --text:     #e6edf3;
+    --muted:    #8b949e;
+    --code-bg:  #0d1117;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Crimson Pro', Georgia, serif;
+    font-size: 18px;
+    line-height: 1.75;
+    overflow-x: hidden;
+  }
+
+  /* ─── Noise overlay ─── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999; opacity: .5;
+  }
+
+  /* ─── Hero ─── */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    position: relative;
+    padding: 4rem 2rem;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 60px 60px;
+    opacity: .35;
+    animation: gridFade 3s ease forwards;
+  }
+
+  @keyframes gridFade { from { opacity: 0 } to { opacity: .35 } }
+
+  .hero-glow {
+    position: absolute;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(240,192,64,.07) 0%, transparent 70%);
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    animation: pulse 6s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { transform: translate(-50%,-50%) scale(1); }
+    50%      { transform: translate(-50%,-50%) scale(1.15); }
+  }
+
+  .hero-content { position: relative; text-align: center; max-width: 860px; }
+
+  .day-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .75rem; letter-spacing: .2em;
+    color: var(--accent); border: 1px solid var(--accent);
+    padding: .3rem .9rem; border-radius: 2px;
+    margin-bottom: 2rem;
+    animation: fadeUp .8s .2s both ease;
+  }
+
+  .hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.8rem, 7vw, 5.5rem);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -.02em;
+    margin-bottom: 1.5rem;
+    animation: fadeUp .8s .4s both ease;
+  }
+
+  .hero-title .line2 { color: var(--accent); }
+
+  .hero-subtitle {
+    font-family: 'Crimson Pro', serif;
+    font-style: italic;
+    font-size: 1.25rem;
+    color: var(--muted);
+    max-width: 560px; margin: 0 auto 3rem;
+    animation: fadeUp .8s .6s both ease;
+  }
+
+  .hero-meta {
+    display: flex; gap: 2.5rem; justify-content: center;
+    flex-wrap: wrap;
+    animation: fadeUp .8s .8s both ease;
+  }
+
+  .meta-item {
+    display: flex; flex-direction: column; align-items: center; gap: .25rem;
+  }
+
+  .meta-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .65rem; color: var(--muted); letter-spacing: .15em; text-transform: uppercase;
+  }
+
+  .meta-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .95rem; color: var(--accent2);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── Progress bar ─── */
+  .progress-bar {
+    position: fixed; top: 0; left: 0;
+    height: 2px; background: var(--accent);
+    z-index: 1000; width: 0%;
+    transition: width .1s;
+  }
+
+  /* ─── Nav sidebar ─── */
+  .sidebar {
+    position: fixed; left: 0; top: 50%;
+    transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: .8rem;
+    padding-left: 1.5rem;
+    z-index: 100;
+  }
+
+  @media (max-width: 900px) { .sidebar { display: none; } }
+
+  .nav-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--border); cursor: pointer;
+    transition: all .3s; border: 1px solid var(--muted);
+    text-decoration: none; display: block;
+  }
+
+  .nav-dot:hover, .nav-dot.active { background: var(--accent); border-color: var(--accent); transform: scale(1.5); }
+
+  /* ─── Layout ─── */
+  .container { max-width: 780px; margin: 0 auto; padding: 0 2rem; }
+
+  section { padding: 5rem 0; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+
+  /* ─── Section headers ─── */
+  .section-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .68rem; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 1rem; display: block;
+  }
+
+  h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 700; line-height: 1.15;
+    margin-bottom: 1.5rem;
+  }
+
+  h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.35rem; font-weight: 700;
+    margin: 2rem 0 .75rem;
+  }
+
+  p { margin-bottom: 1.25rem; color: #cdd5df; }
+
+  strong { color: var(--text); font-weight: 600; }
+
+  em { color: var(--accent2); font-style: italic; }
+
+  /* ─── Roadmap ─── */
+  .roadmap {
+    display: grid; gap: 1rem; margin-top: 2rem;
+  }
+
+  .phase {
+    display: grid; grid-template-columns: 90px 1fr;
+    gap: 1rem; align-items: start;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1.25rem 1.5rem;
+    transition: border-color .25s, transform .25s;
+    cursor: default;
+  }
+
+  .phase:hover { border-color: var(--accent); transform: translateX(4px); }
+  .phase.current { border-color: var(--accent2); background: #111d2b; }
+
+  .phase-days {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .7rem; color: var(--muted);
+    padding-top: .2rem;
+    line-height: 1.4;
+  }
+
+  .phase-days strong { display: block; font-size: 1.1rem; color: var(--accent); }
+
+  .phase-title { font-family: 'Playfair Display', serif; font-size: 1.05rem; margin-bottom: .3rem; }
+  .phase-desc { font-size: .9rem; color: var(--muted); line-height: 1.5; }
+
+  .phase-tag {
+    font-family: 'JetBrains Mono', monospace; font-size: .6rem;
+    background: rgba(79,195,247,.1); color: var(--accent2);
+    border: 1px solid rgba(79,195,247,.3);
+    padding: .15rem .45rem; border-radius: 2px; display: inline-block; margin-top: .4rem;
+  }
+
+  .phase.current .phase-tag {
+    background: rgba(240,192,64,.1); color: var(--accent);
+    border-color: rgba(240,192,64,.3);
+  }
+
+  /* ─── Concept cards ─── */
+  .concept-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem; margin-top: 2rem;
+  }
+
+  .concept-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1.5rem;
+    transition: all .3s;
+  }
+
+  .concept-card:hover { border-color: var(--accent3); transform: translateY(-3px); }
+
+  .concept-icon {
+    font-size: 1.8rem; margin-bottom: .75rem; display: block;
+  }
+
+  .concept-card h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .85rem; color: var(--accent3);
+    margin-bottom: .5rem; letter-spacing: .05em;
+  }
+
+  .concept-card p {
+    font-size: .9rem; color: var(--muted); margin: 0; line-height: 1.55;
+  }
+
+  /* ─── Architecture diagram ─── */
+  .arch-diagram {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 2rem; margin: 2rem 0;
+    font-family: 'JetBrains Mono', monospace;
+    overflow-x: auto;
+  }
+
+  .arch-diagram pre {
+    font-size: .78rem; line-height: 2;
+    color: var(--muted);
+  }
+
+  .arch-diagram .hl  { color: var(--accent); }
+  .arch-diagram .hl2 { color: var(--accent2); }
+  .arch-diagram .hl3 { color: var(--accent3); }
+  .arch-diagram .hlr { color: var(--danger); }
+
+  /* ─── Code block ─── */
+  .code-block {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 4px; overflow: hidden; margin: 1.5rem 0;
+  }
+
+  .code-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .6rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: #0d1117;
+  }
+
+  .code-dots { display: flex; gap: .4rem; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #f87171; }
+  .dot-y { background: #f0c040; }
+  .dot-g { background: #4ade80; }
+
+  .code-lang {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .65rem; color: var(--muted); letter-spacing: .12em; text-transform: uppercase;
+  }
+
+  .code-body {
+    padding: 1.5rem;
+    overflow-x: auto;
+  }
+
+  .code-body code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .8rem; line-height: 1.9;
+    white-space: pre;
+    display: block;
+  }
+
+  .c-kw   { color: #ff7b72; }   /* keyword */
+  .c-fn   { color: #d2a8ff; }   /* function */
+  .c-str  { color: #a5d6ff; }   /* string */
+  .c-num  { color: #79c0ff; }   /* number */
+  .c-cm   { color: #6e7681; }   /* comment */
+  .c-var  { color: #ffa657; }   /* variable */
+  .c-op   { color: #79c0ff; }   /* operator */
+  .c-cls  { color: #f0c040; }   /* class */
+
+  /* ─── Callout ─── */
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: rgba(240,192,64,.05);
+    padding: 1.25rem 1.5rem;
+    border-radius: 0 4px 4px 0;
+    margin: 2rem 0;
+  }
+
+  .callout.info { border-color: var(--accent2); background: rgba(79,195,247,.05); }
+  .callout.violet { border-color: var(--accent3); background: rgba(167,139,250,.05); }
+
+  .callout-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .7rem; letter-spacing: .15em; text-transform: uppercase;
+    margin-bottom: .5rem;
+    color: var(--accent);
+  }
+
+  .callout.info .callout-title  { color: var(--accent2); }
+  .callout.violet .callout-title { color: var(--accent3); }
+
+  .callout p { margin: 0; font-size: .95rem; }
+
+  /* ─── Task list ─── */
+  .task-list { list-style: none; margin-top: 1.5rem; }
+
+  .task-list li {
+    display: flex; align-items: flex-start; gap: 1rem;
+    padding: .9rem 1.2rem;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 4px; margin-bottom: .6rem;
+    transition: border-color .25s;
+  }
+
+  .task-list li:hover { border-color: var(--accent2); }
+
+  .task-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .75rem; color: var(--accent);
+    background: rgba(240,192,64,.1);
+    border: 1px solid rgba(240,192,64,.25);
+    min-width: 28px; height: 28px;
+    display: grid; place-items: center; border-radius: 2px;
+    flex-shrink: 0; margin-top: .1rem;
+  }
+
+  .task-text { font-size: .95rem; color: #cdd5df; line-height: 1.5; }
+  .task-text strong { color: var(--text); }
+
+  /* ─── Formula card ─── */
+  .formula-card {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1.5rem 2rem; margin: 1.5rem 0;
+    text-align: center;
+  }
+
+  .formula {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem; color: var(--accent);
+    letter-spacing: .05em; display: block; margin-bottom: .5rem;
+  }
+
+  .formula-desc {
+    font-size: .85rem; color: var(--muted); font-style: italic;
+  }
+
+  /* ─── Footer ─── */
+  footer {
+    text-align: center; padding: 4rem 2rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .75rem; color: var(--muted); letter-spacing: .08em;
+  }
+
+  footer span { color: var(--accent); }
+
+  .next-btn {
+    display: inline-flex; align-items: center; gap: .6rem;
+    background: transparent; border: 1px solid var(--accent);
+    color: var(--accent); padding: .8rem 2rem;
+    font-family: 'JetBrains Mono', monospace; font-size: .8rem;
+    letter-spacing: .12em; text-transform: uppercase;
+    cursor: pointer; border-radius: 2px;
+    transition: all .25s; text-decoration: none;
+    margin-top: 2rem; 
+  }
+
+  .next-btn:hover { background: var(--accent); color: var(--bg); }
+
+  /* ─── Inline mono ─── */
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .82em; background: var(--card);
+    border: 1px solid var(--border); padding: .1em .4em; border-radius: 2px;
+    color: var(--accent2);
+  }
+
+  /* ─── Quiz ─── */
+  .quiz {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 4px; padding: 2rem; margin-top: 2rem;
+  }
+
+  .quiz-q {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem; margin-bottom: 1.2rem;
+  }
+
+  .quiz-options { display: flex; flex-direction: column; gap: .6rem; }
+
+  .quiz-opt {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 3px; padding: .7rem 1rem;
+    font-family: 'JetBrains Mono', monospace; font-size: .8rem;
+    cursor: pointer; transition: all .2s; text-align: left;
+    color: var(--muted);
+  }
+
+  .quiz-opt:hover  { border-color: var(--accent2); color: var(--text); }
+  .quiz-opt.right  { border-color: #4ade80; background: rgba(74,222,128,.08); color: #4ade80; }
+  .quiz-opt.wrong  { border-color: var(--danger); background: rgba(248,113,113,.08); color: var(--danger); }
+
+  .quiz-feedback {
+    margin-top: 1rem; font-size: .9rem;
+    font-style: italic; color: var(--muted); display: none;
+  }
+
+  /* Scroll animation */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s ease, transform .6s ease; }
+  .revealed { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<nav class="sidebar">
+  <a class="nav-dot active" href="#hero"   data-section="hero"        title="Введение"></a>
+  <a class="nav-dot"        href="#roadmap" data-section="roadmap"    title="Роадмап"></a>
+  <a class="nav-dot"        href="#theory"  data-section="theory"     title="Теория"></a>
+  <a class="nav-dot"        href="#arch"    data-section="arch"       title="Архитектура"></a>
+  <a class="nav-dot"        href="#practice" data-section="practice"  title="Практика"></a>
+  <a class="nav-dot"        href="#homework" data-section="homework"  title="Задание"></a>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero" id="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-content">
+    <div class="day-badge">ДЕНЬ 01 / 90 &nbsp;·&nbsp; УРОВЕНЬ: ИНИЦИАЦИЯ</div>
+    <h1 class="hero-title">
+      Как устроены<br>
+      <span class="line2">языковые модели</span>
+    </h1>
+    <p class="hero-subtitle">
+      От токенов до трансформера — фундамент, без которого
+      всё остальное не имеет смысла
+    </p>
+    <div class="hero-meta">
+      <div class="meta-item">
+        <span class="meta-label">Время</span>
+        <span class="meta-value">~60 мин</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Сложность</span>
+        <span class="meta-value">★★☆☆☆</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Код</span>
+        <span class="meta-value">Python 3</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Зависимости</span>
+        <span class="meta-value">numpy</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ROADMAP ═══ -->
+<section id="roadmap">
+  <div class="container reveal">
+    <span class="section-tag">// 00 — обзор курса</span>
+    <h2>90 дней до собственной модели</h2>
+    <p>
+      Курс построен как <strong>восхождение</strong>: каждый этап стоит на предыдущем.
+      Финальная цель — вы сможете дообучить LLM под свою задачу и понимать,
+      что происходит внутри «чёрного ящика».
+    </p>
+
+    <div class="roadmap">
+
+      <div class="phase current">
+        <div class="phase-days"><strong>1–15</strong>Дни</div>
+        <div>
+          <div class="phase-title">Математика и фундамент</div>
+          <div class="phase-desc">Линейная алгебра, вероятность, градиентный спуск. Всё через NumPy — без абстракций.</div>
+          <span class="phase-tag">← ВЫ ЗДЕСЬ</span>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-days"><strong>16–30</strong>Дни</div>
+        <div>
+          <div class="phase-title">Нейросети с нуля</div>
+          <div class="phase-desc">Перцептрон, backpropagation, PyTorch. Пишем нейронку руками — без .fit().</div>
+          <span class="phase-tag">PyTorch</span>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-days"><strong>31–50</strong>Дни</div>
+        <div>
+          <div class="phase-title">Трансформеры и attention</div>
+          <div class="phase-desc">Механизм внимания, positional encoding, реализация GPT-nano — 50 строк кода.</div>
+          <span class="phase-tag">Transformers</span>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-days"><strong>51–70</strong>Дни</div>
+        <div>
+          <div class="phase-title">Обучение языковых моделей</div>
+          <div class="phase-desc">Токенизация BPE, датасеты, pretraining на малом корпусе. HuggingFace Datasets.</div>
+          <span class="phase-tag">HuggingFace</span>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-days"><strong>71–85</strong>Дни</div>
+        <div>
+          <div class="phase-title">Fine-tuning и LoRA</div>
+          <div class="phase-desc">Дообучение GPT-2 / LLaMA, PEFT, LoRA. Делаем модель под конкретную предметную область.</div>
+          <span class="phase-tag">LoRA / PEFT</span>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-days"><strong>86–90</strong>Дни</div>
+        <div>
+          <div class="phase-title">Деплой и продакшн</div>
+          <div class="phase-desc">Quantization, GGUF, FastAPI-сервер, Docker. Ваша модель онлайн за 5 минут.</div>
+          <span class="phase-tag">Deployment</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="callout info" style="margin-top:2.5rem;">
+      <div class="callout-title">// Ваш стек — большое преимущество</div>
+      <p>SQL-навыки пригодятся при работе с датасетами: фильтрация, джойны, агрегации.
+         Python уже есть — значит, мы сразу идём глубже, а не тратим время на синтаксис.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ THEORY ═══ -->
+<section id="theory">
+  <div class="container reveal">
+    <span class="section-tag">// 01 — теория</span>
+    <h2>Что на самом деле делает языковая модель?</h2>
+
+    <p>
+      GPT, Claude, LLaMA — все они решают <strong>одну задачу</strong>:
+      <em>предсказать следующий токен</em> по предыдущим.
+      Ничего более. Всё «понимание» и «рассуждение» — эмерджентное свойство
+      этой простой цели, обученной на достаточно большом корпусе.
+    </p>
+
+    <div class="formula-card">
+      <span class="formula">P(w<sub>t+1</sub> | w<sub>1</sub>, w<sub>2</sub>, ..., w<sub>t</sub>)</span>
+      <span class="formula-desc">Вероятность следующего слова (токена) при условии всех предыдущих</span>
+    </div>
+
+    <h3>Что такое токен?</h3>
+    <p>
+      Модели не работают с буквами или словами напрямую. Они работают с <strong>токенами</strong> — 
+      кусочками текста. Слово <code>"привет"</code> — один токен.
+      Слово <code>"трансформер"</code> — может быть два: <code>"транс"</code> + <code>"формер"</code>.
+      Токенизатор GPT-4 разбивает любой текст на ~100 000 возможных токенов.
+    </p>
+
+    <div class="concept-grid">
+
+      <div class="concept-card">
+        <span class="concept-icon">🔤</span>
+        <h4>Токенизация</h4>
+        <p>Текст → числа. BPE-алгоритм строит словарь из частых подстрок. "unhappiness" → ["un", "happiness"]</p>
+      </div>
+
+      <div class="concept-card">
+        <span class="concept-icon">📐</span>
+        <h4>Embedding</h4>
+        <p>Каждый токен → вектор из 768–4096 чисел. Похожие слова — близкие векторы. Это «смысл» в числах.</p>
+      </div>
+
+      <div class="concept-card">
+        <span class="concept-icon">🧠</span>
+        <h4>Attention</h4>
+        <p>Механизм, который решает: на какие предыдущие токены смотреть при предсказании следующего.</p>
+      </div>
+
+      <div class="concept-card">
+        <span class="concept-icon">🎲</span>
+        <h4>Sampling</h4>
+        <p>Модель выдаёт распределение вероятностей. Temperature=0 → детерминировано. Temperature=1 → творчески.</p>
+      </div>
+
+    </div>
+
+    <h3>Почему это «нейронная сеть»?</h3>
+    <p>
+      Внутри — миллиарды чисел (<strong>веса</strong>). При обучении мы подаём текст,
+      модель делает предсказание, считаем ошибку, и чуть-чуть
+      <em>подталкиваем веса</em> в правильную сторону. Делаем это
+      миллиарды раз — веса «запоминают» язык.
+    </p>
+
+    <div class="callout violet">
+      <div class="callout-title">// Ключевая интуиция</div>
+      <p>
+        Claude обучен предсказывать следующий токен на текстах интернета + человеческом фидбеке.
+        Никто не вложил в него «знание» руками. Знание <em>появилось само</em>
+        как следствие этой задачи на огромных данных.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ARCHITECTURE ═══ -->
+<section id="arch">
+  <div class="container reveal">
+    <span class="section-tag">// 02 — архитектура</span>
+    <h2>Трансформер: что внутри?</h2>
+    <p>
+      Архитектура Transformer (Vaswani et al., 2017) — фундамент всех
+      современных LLM. Упрощённо, токены проходят через <strong>стек блоков</strong>,
+      каждый из которых состоит из двух частей:
+    </p>
+
+    <div class="arch-diagram">
+      <pre>
+  <span class="hl">INPUT TEXT</span>: "Кошка сидит на"
+       │
+       ▼
+  <span class="hl2">┌─────────────────────────┐</span>
+  <span class="hl2">│    TOKENIZER (BPE)      │</span>  "Кошка" → 1234, "сидит" → 567, "на" → 89
+  <span class="hl2">└────────────┬────────────┘</span>
+               │
+       ▼
+  <span class="hl3">┌─────────────────────────┐</span>
+  <span class="hl3">│  TOKEN EMBEDDING        │</span>  [1234] → вектор 768 чисел
+  <span class="hl3">│  POSITIONAL ENCODING    │</span>  + «я стою на позиции 3»
+  <span class="hl3">└────────────┬────────────┘</span>
+               │
+       ▼
+  <span class="hl">╔═════════════════════════╗</span>  ┐
+  <span class="hl">║  TRANSFORMER BLOCK × N  ║</span>  │ Для GPT-2: N=12
+  <span class="hl">║  ┌──────────────────┐   ║</span>  │ Для GPT-4: N≈96
+  <span class="hl">║  │ SELF-ATTENTION   │   ║</span>  │
+  <span class="hl">║  │  (кто на кого    │   ║</span>  │ ← Самое важное!
+  <span class="hl">║  │   смотрит)       │   ║</span>  │
+  <span class="hl">║  └────────┬─────────┘   ║</span>  │
+  <span class="hl">║  ┌────────▼─────────┐   ║</span>  │
+  <span class="hl">║  │  FEED-FORWARD    │   ║</span>  │ Обычная нейросеть
+  <span class="hl">║  │  NETWORK (FFN)   │   ║</span>  │ 2 слоя, ReLU/GELU
+  <span class="hl">║  └──────────────────┘   ║</span>  │
+  <span class="hl">╚═════════════════════════╝</span>  ┘
+               │
+       ▼
+  <span class="hlr">┌─────────────────────────┐</span>
+  <span class="hlr">│  LINEAR + SOFTMAX       │</span>  → вероятности по всему словарю
+  <span class="hlr">└─────────────────────────┘</span>
+               │
+       ▼
+  <span class="hl2">OUTPUT</span>: "коврике" (с вероятностью 0.42)
+      </pre>
+    </div>
+
+    <h3>Self-Attention простыми словами</h3>
+    <p>
+      При обработке слова <code>"банк"</code> в предложении «Я пошёл в банк за деньгами»
+      механизм внимания видит <code>"деньгами"</code> и понимает: речь о финансовом банке,
+      не о берегу реки. Он <em>динамически</em> решает, какие токены важны для
+      понимания текущего.
+    </p>
+
+    <div class="formula-card">
+      <span class="formula">Attention(Q, K, V) = softmax( QKᵀ / √d<sub>k</sub> ) · V</span>
+      <span class="formula-desc">Q=запросы, K=ключи, V=значения — все получены умножением на обучаемые матрицы</span>
+    </div>
+
+    <p>
+      Не пугайтесь формулы — мы разберём её пошагово на Дне 35.
+      Сегодня важно понять <strong>идею</strong>: токены «общаются» между собой через умножение матриц.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ PRACTICE ═══ -->
+<section id="practice">
+  <div class="container reveal">
+    <span class="section-tag">// 03 — практика</span>
+    <h2>Первый код: токенизация и векторы</h2>
+
+    <p>
+      Установите зависимость: <code>pip install numpy</code>.
+      Сегодня мы реализуем упрощённую токенизацию и посмотрим, как
+      слова превращаются в числа.
+    </p>
+
+    <div class="callout">
+      <div class="callout-title">// Задача урока</div>
+      <p>Написать три функции: токенизатор на пробелах, one-hot encoding, и косинусное сходство — 
+         без библиотек кроме NumPy.</p>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots">
+          <div class="dot dot-r"></div>
+          <div class="dot dot-y"></div>
+          <div class="dot dot-g"></div>
+        </div>
+        <span class="code-lang">Python · lesson_01.py</span>
+      </div>
+      <div class="code-body">
+        <code><span class="c-cm"># Урок 1 — Токены, векторы, сходство</span>
+<span class="c-cm"># Запустите: python lesson_01.py</span>
+
+<span class="c-kw">import</span> numpy <span class="c-kw">as</span> <span class="c-var">np</span>
+
+<span class="c-cm"># ────────────────────────────────────────────────
+# 1. Наивная токенизация (разбивка по пробелам)
+# В реальных LLM используется BPE — изучим позже
+# ────────────────────────────────────────────────</span>
+
+<span class="c-kw">def</span> <span class="c-fn">build_vocab</span>(corpus: <span class="c-fn">list</span>[<span class="c-fn">str</span>]) -> <span class="c-fn">dict</span>:
+    <span class="c-str">"""Строит словарь {слово: индекс} из списка предложений."""</span>
+    words = <span class="c-fn">set</span>()
+    <span class="c-kw">for</span> sentence <span class="c-kw">in</span> corpus:
+        words.<span class="c-fn">update</span>(sentence.<span class="c-fn">lower</span>().<span class="c-fn">split</span>())
+    <span class="c-kw">return</span> {word: idx <span class="c-kw">for</span> idx, word <span class="c-kw">in</span> <span class="c-fn">enumerate</span>(<span class="c-fn">sorted</span>(words))}
+
+<span class="c-kw">def</span> <span class="c-fn">tokenize</span>(sentence: <span class="c-fn">str</span>, vocab: <span class="c-fn">dict</span>) -> <span class="c-fn">list</span>[<span class="c-fn">int</span>]:
+    <span class="c-str">"""Предложение → список индексов токенов."""</span>
+    <span class="c-kw">return</span> [vocab.<span class="c-fn">get</span>(w, <span class="c-num">-1</span>) <span class="c-kw">for</span> w <span class="c-kw">in</span> sentence.<span class="c-fn">lower</span>().<span class="c-fn">split</span>()]
+
+<span class="c-cm"># ────────────────────────────────────────────────
+# 2. One-Hot Encoding — простейший способ
+#    превратить токен в вектор
+#    (В LLM используются learned embeddings, но
+#     one-hot — отправная точка понимания)
+# ────────────────────────────────────────────────</span>
+
+<span class="c-kw">def</span> <span class="c-fn">one_hot</span>(token_id: <span class="c-fn">int</span>, vocab_size: <span class="c-fn">int</span>) -> <span class="c-var">np</span>.ndarray:
+    <span class="c-str">"""Токен → one-hot вектор."""</span>
+    vec = <span class="c-var">np</span>.<span class="c-fn">zeros</span>(vocab_size)
+    vec[token_id] = <span class="c-num">1.0</span>
+    <span class="c-kw">return</span> vec
+
+<span class="c-cm"># ────────────────────────────────────────────────
+# 3. Косинусное сходство
+#    Метрика «похожести» двух векторов
+#    cos(θ) = 1  → одинаковые
+#    cos(θ) = 0  → перпендикулярные (несвязанные)
+#    cos(θ) = -1 → противоположные
+# ────────────────────────────────────────────────</span>
+
+<span class="c-kw">def</span> <span class="c-fn">cosine_similarity</span>(a: <span class="c-var">np</span>.ndarray, b: <span class="c-var">np</span>.ndarray) -> <span class="c-fn">float</span>:
+    <span class="c-kw">return</span> <span class="c-var">np</span>.<span class="c-fn">dot</span>(a, b) / (<span class="c-var">np</span>.<span class="c-fn">linalg</span>.<span class="c-fn">norm</span>(a) * <span class="c-var">np</span>.<span class="c-fn">linalg</span>.<span class="c-fn">norm</span>(b) + <span class="c-num">1e-8</span>)
+
+<span class="c-cm"># ════════════════════════════════════════════════
+# ЗАПУСК
+# ════════════════════════════════════════════════</span>
+
+corpus = [
+    <span class="c-str">"кошка сидит на ковре"</span>,
+    <span class="c-str">"собака лежит на диване"</span>,
+    <span class="c-str">"кошка и собака друзья"</span>,
+]
+
+vocab   = <span class="c-fn">build_vocab</span>(corpus)
+<span class="c-fn">print</span>(<span class="c-str">f"Словарь (<span class="c-op">{</span><span class="c-fn">len</span>(vocab)<span class="c-op">}</span> слов): <span class="c-op">{</span>vocab<span class="c-op">}</span>\n"</span>)
+
+<span class="c-cm"># Токенизируем первое предложение</span>
+tokens = <span class="c-fn">tokenize</span>(<span class="c-str">"кошка сидит на ковре"</span>, vocab)
+<span class="c-fn">print</span>(<span class="c-str">f"Токены: <span class="c-op">{</span>tokens<span class="c-op">}</span>"</span>)
+
+<span class="c-cm"># Сравниваем «кошка» и «собака»</span>
+vocab_size = <span class="c-fn">len</span>(vocab)
+vec_koshka  = <span class="c-fn">one_hot</span>(vocab[<span class="c-str">"кошка"</span>],  vocab_size)
+vec_sobaka  = <span class="c-fn">one_hot</span>(vocab[<span class="c-str">"собака"</span>], vocab_size)
+vec_diwan   = <span class="c-fn">one_hot</span>(vocab[<span class="c-str">"диване"</span>], vocab_size)
+
+sim_ks = <span class="c-fn">cosine_similarity</span>(vec_koshka, vec_sobaka)
+sim_kd = <span class="c-fn">cosine_similarity</span>(vec_koshka, vec_diwan)
+
+<span class="c-fn">print</span>(<span class="c-str">f"\nСходство кошка ↔ собака : <span class="c-op">{</span>sim_ks:<span class="c-num">.3f</span><span class="c-op">}</span>"</span>)  <span class="c-cm"># 0.000 (one-hot не знает)</span>
+<span class="c-fn">print</span>(<span class="c-str">f"Сходство кошка ↔ диване : <span class="c-op">{</span>sim_kd:<span class="c-num">.3f</span><span class="c-op">}</span>"</span>)  <span class="c-cm"># 0.000</span>
+
+<span class="c-fn">print</span>(<span class="c-str">"""
+[!] Заметьте: one-hot не видит, что кошка и
+    собака похожи (оба животные). Это проблема
+    решается LEARNED EMBEDDINGS — изучим на Дне 16.
+"""</span>)</code>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-title">// Ожидаемый вывод</div>
+      <p>
+        Все сходства будут 0.000 — и это правильно! One-hot векторы ортогональны.
+        В реальных LLM у «кошки» и «собаки» косинусное сходство ~0.72.
+        Это и есть смысл обучения эмбеддингов — тема Дня 16.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ HOMEWORK ═══ -->
+<section id="homework">
+  <div class="container reveal">
+    <span class="section-tag">// 04 — домашнее задание</span>
+    <h2>Задания к Дню 2</h2>
+    <p>
+      Задания разбиты по уровню. <strong>Обязательные</strong> — база.
+      <strong>Продвинутые</strong> — для тех, кто хочет глубже.
+    </p>
+
+    <ul class="task-list">
+      <li>
+        <div class="task-num">01</div>
+        <div class="task-text">
+          <strong>Запустите код выше.</strong> Измените corpus — добавьте 3–4 своих предложения.
+          Посмотрите, как меняется размер словаря.
+        </div>
+      </li>
+      <li>
+        <div class="task-num">02</div>
+        <div class="task-text">
+          <strong>Напишите функцию sentence_vector</strong> — она принимает предложение и возвращает
+          среднее арифметическое one-hot векторов всех токенов.
+          Сравните сходство двух предложений.
+        </div>
+      </li>
+      <li>
+        <div class="task-num">03</div>
+        <div class="task-text">
+          <strong>Прочитайте про BPE</strong> (Byte-Pair Encoding). 
+          Зайдите на <code>platform.openai.com/tokenizer</code>, 
+          введите любой русскоязычный текст — посмотрите, как GPT его токенизирует.
+          Запишите наблюдения.
+        </div>
+      </li>
+      <li>
+        <div class="task-num">★</div>
+        <div class="task-text">
+          <strong>[Продвинутое]</strong> Установите <code>pip install tiktoken</code> — 
+          официальный токенизатор OpenAI. Токенизируйте 10 разных русских слов и
+          подсчитайте среднее количество токенов на слово.
+          Сравните с английским. Что заметили?
+        </div>
+      </li>
+    </ul>
+
+    <!-- Mini quiz -->
+    <div class="quiz" style="margin-top:3rem;">
+      <div class="quiz-q">🧠 Быстрая проверка: что делает механизм Self-Attention?</div>
+      <div class="quiz-options">
+        <button class="quiz-opt" onclick="checkAnswer(this, false)">
+          A) Запоминает каждое слово по отдельности, независимо от контекста
+        </button>
+        <button class="quiz-opt" onclick="checkAnswer(this, true)">
+          B) Определяет, насколько каждый токен «важен» для обработки других токенов
+        </button>
+        <button class="quiz-opt" onclick="checkAnswer(this, false)">
+          C) Кодирует позицию токена в предложении
+        </button>
+        <button class="quiz-opt" onclick="checkAnswer(this, false)">
+          D) Переводит токены из one-hot в плотные векторы
+        </button>
+      </div>
+      <div class="quiz-feedback" id="qfeedback">
+        ✓ Верно. Self-Attention — это динамический механизм взвешивания:
+        слово «банк» «смотрит» на «деньги» и понимает контекст.
+        Позиции кодирует Positional Encoding, плотные векторы — Embedding.
+      </div>
+    </div>
+
+    <!-- What's next -->
+    <div style="border-top: 1px solid var(--border); margin-top: 3.5rem; padding-top: 2.5rem;">
+      <span class="section-tag">// следующий урок</span>
+      <h3 style="font-size: 1.6rem; margin-top:.5rem;">День 2 — Линейная алгебра для ML</h3>
+      <p style="color: var(--muted); font-size:.95rem;">
+        Векторы, матрицы, умножение матриц, транспонирование.
+        Именно эти операции происходят внутри каждого трансформера — 
+        тысячи раз в секунду. Реализуем matrix multiplication вручную и 
+        сравним с NumPy.
+      </p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p style="font-size:.7rem; letter-spacing:.1em; margin-bottom: 1rem;">
+      КУРС <span>«90 ДНЕЙ ДО СОБСТВЕННОЙ LLM»</span> &nbsp;·&nbsp; ДЕНЬ <span>01</span> / 90
+    </p>
+    <p style="color: #444; font-size: .65rem;">
+      Следующий урок появится после того, как вы выполните задания. Удачи.
+    </p>
+  </div>
+</footer>
+
+<script>
+  // Progress bar
+  window.addEventListener('scroll', () => {
+    const pct = window.scrollY / (document.body.scrollHeight - window.innerHeight) * 100;
+    document.getElementById('progressBar').style.width = pct + '%';
+  });
+
+  // Scroll reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('revealed'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // Nav dots
+  const sections = ['hero','roadmap','theory','arch','practice','homework'];
+  window.addEventListener('scroll', () => {
+    const mid = window.scrollY + window.innerHeight / 2;
+    sections.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const dot = document.querySelector(`[data-section="${id}"]`);
+      if (!dot) return;
+      if (el.offsetTop <= mid && el.offsetTop + el.offsetHeight > mid) {
+        document.querySelectorAll('.nav-dot').forEach(d => d.classList.remove('active'));
+        dot.classList.add('active');
+      }
+    });
+  });
+
+  // Smooth nav
+  document.querySelectorAll('.nav-dot').forEach(dot => {
+    dot.addEventListener('click', e => {
+      e.preventDefault();
+      document.getElementById(dot.dataset.section)?.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+
+  // Quiz
+  function checkAnswer(btn, correct) {
+    document.querySelectorAll('.quiz-opt').forEach(b => {
+      b.disabled = true;
+      b.classList.remove('right', 'wrong');
+    });
+    btn.classList.add(correct ? 'right' : 'wrong');
+    if (!correct) {
+      document.querySelectorAll('.quiz-opt')[1].classList.add('right');
+    }
+    const fb = document.getElementById('qfeedback');
+    fb.style.display = 'block';
+    fb.style.color = correct ? '#4ade80' : '#f87171';
+    if (!correct) {
+      fb.textContent = '✗ Не совсем. Правильный ответ — B. Self-Attention взвешивает связи между токенами в контексте.';
+      fb.style.color = '#f87171';
+    }
+  }
+</script>
+</body>
+</html>
