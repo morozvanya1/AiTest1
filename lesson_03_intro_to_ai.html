@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>День 3 — Производные и градиентный спуск</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#070b10;--card:#0e1520;--border:#1c2a3a;--acc:#00d4ff;--acc2:#ff6b35;--acc3:#7fff6b;--text:#d4e8f5;--muted:#5a7a90;--code:#050810;}
+*{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:16px;line-height:1.75;overflow-x:hidden;}
+#prog{position:fixed;top:0;left:0;height:2px;background:var(--acc);z-index:9999;width:0;}
+.sidebar{position:fixed;left:1rem;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:.6rem;z-index:100;}
+@media(max-width:860px){.sidebar{display:none;}}
+.ndot{width:5px;height:5px;border-radius:50%;background:var(--border);display:block;cursor:pointer;transition:all .3s;}
+.ndot:hover,.ndot.on{background:var(--acc);box-shadow:0 0 8px var(--acc);transform:scale(1.7);}
+.hero{min-height:100vh;display:grid;place-items:center;padding:4rem 2rem;border-bottom:1px solid var(--border);position:relative;overflow:hidden;}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(0,212,255,.04) 0%,transparent 70%);}
+.curve-bg{position:absolute;bottom:0;left:0;right:0;height:200px;overflow:hidden;opacity:.15;}
+.hero-inner{position:relative;text-align:center;max-width:800px;}
+.badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.2em;color:var(--acc);border:1px solid var(--acc);padding:.28rem .9rem;border-radius:20px;margin-bottom:2rem;animation:up .6s .1s both;}
+.hero-title{font-size:clamp(2.6rem,7vw,5rem);font-weight:700;line-height:1.05;margin-bottom:1.5rem;animation:up .6s .25s both;}
+.hero-title em{color:var(--acc);font-style:normal;}
+.hero-sub{font-size:1rem;color:var(--muted);max-width:500px;margin:0 auto 2.5rem;animation:up .6s .4s both;}
+.meta{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;animation:up .6s .55s both;}
+.mi{display:flex;flex-direction:column;align-items:center;gap:.15rem;}
+.mv{font-family:'JetBrains Mono',monospace;font-size:.9rem;color:var(--acc);}
+.ml{font-size:.6rem;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;}
+@keyframes up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.container{max-width:760px;margin:0 auto;padding:0 2rem;}
+section{padding:4.5rem 0;border-bottom:1px solid var(--border);}
+section:last-of-type{border-bottom:none;}
+.stag{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--acc);display:block;margin-bottom:.7rem;}
+h2{font-size:clamp(1.9rem,4vw,2.8rem);font-weight:700;line-height:1.1;margin-bottom:1.3rem;}
+h3{font-size:1.05rem;font-weight:600;margin:2.2rem 0 .7rem;color:var(--text);}
+p{margin-bottom:1.1rem;color:#96b4cc;font-size:.95rem;}
+strong{color:var(--text);}em{color:var(--acc);font-style:normal;}
+code{font-family:'JetBrains Mono',monospace;font-size:.8em;background:var(--card);border:1px solid var(--border);padding:.1em .4em;border-radius:2px;color:var(--acc);}
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .5s,transform .5s;}
+.revealed{opacity:1;transform:none;}
+/* gradient demo */
+.grad-demo{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:1.5rem;margin:1.5rem 0;}
+.grad-demo h4{font-family:'JetBrains Mono',monospace;font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;color:var(--acc);margin-bottom:1rem;}
+canvas{display:block;max-width:100%;border-radius:4px;}
+.ctrl{display:flex;gap:.8rem;align-items:center;margin-top:1rem;flex-wrap:wrap;}
+.ctrl label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--muted);}
+.ctrl input[type=range]{-webkit-appearance:none;height:3px;background:var(--border);border-radius:2px;outline:none;width:150px;}
+.ctrl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--acc);cursor:pointer;}
+.step-btn{font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--acc);background:transparent;color:var(--acc);padding:.4rem .9rem;border-radius:2px;cursor:pointer;transition:all .2s;}
+.step-btn:hover{background:var(--acc);color:var(--bg);}
+.info-box{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--muted);margin-top:.8rem;line-height:1.9;}
+.info-box .v{color:var(--acc);}
+.info-box .r{color:var(--acc2);}
+/* formula */
+.fcard{background:var(--code);border:1px solid var(--border);border-radius:4px;padding:1.4rem 1.8rem;margin:1.4rem 0;text-align:center;}
+.formula{font-family:'JetBrains Mono',monospace;font-size:.95rem;color:var(--acc);display:block;margin-bottom:.35rem;}
+.fdesc{font-size:.8rem;color:var(--muted);}
+/* callout */
+.callout{border-left:3px solid var(--acc);background:rgba(0,212,255,.04);padding:1.1rem 1.3rem;border-radius:0 4px 4px 0;margin:1.6rem 0;}
+.callout.orange{border-color:var(--acc2);background:rgba(255,107,53,.04);}
+.callout.green{border-color:var(--acc3);background:rgba(127,255,107,.04);}
+.ctag{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--acc);margin-bottom:.35rem;display:block;}
+.callout.orange .ctag{color:var(--acc2);}
+.callout.green .ctag{color:var(--acc3);}
+.callout p{margin:0;font-size:.9rem;}
+/* code block */
+.cblock{background:var(--code);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin:1.4rem 0;}
+.cheader{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem;border-bottom:1px solid var(--border);}
+.cdots{display:flex;gap:.3rem;}
+.cd{width:9px;height:9px;border-radius:50%;}
+.cd-r{background:#f87171;}.cd-y{background:#f0c040;}.cd-g{background:#4ade80;}
+.clang{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;}
+.cbody{padding:1.4rem;overflow-x:auto;}
+.cbody code{font-family:'JetBrains Mono',monospace;font-size:.77rem;line-height:1.85;white-space:pre;display:block;background:none;border:none;padding:0;color:var(--text);}
+.kw{color:#ff7b72;}.fn{color:#d2a8ff;}.str{color:#a5d6ff;}.num{color:#79c0ff;}.cm{color:#3d5263;}.va{color:#ffa657;}
+/* tasks */
+.tasks{list-style:none;margin-top:1.3rem;}
+.tasks li{display:flex;gap:.9rem;align-items:flex-start;background:var(--card);border:1px solid var(--border);border-radius:4px;padding:.9rem 1.1rem;margin-bottom:.5rem;transition:border-color .25s;}
+.tasks li:hover{border-color:var(--acc);}
+.tnum{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--acc);background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);min-width:25px;height:25px;display:grid;place-items:center;border-radius:2px;flex-shrink:0;margin-top:.1rem;}
+.ttxt{font-size:.87rem;color:#96b4cc;line-height:1.5;}
+.ttxt strong{color:var(--text);}
+/* quiz */
+.quiz{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:1.8rem;margin-top:2.5rem;}
+.quiz-q{font-weight:600;font-size:.97rem;margin-bottom:1.1rem;}
+.qopts{display:flex;flex-direction:column;gap:.45rem;}
+.qopt{background:#080d14;border:1px solid var(--border);border-radius:3px;padding:.6rem .95rem;font-family:'JetBrains Mono',monospace;font-size:.72rem;cursor:pointer;transition:all .2s;text-align:left;color:var(--muted);}
+.qopt:hover{border-color:var(--acc);color:var(--text);}
+.qopt.right{border-color:#4ade80;background:rgba(74,222,128,.08);color:#4ade80;}
+.qopt.wrong{border-color:#f87171;background:rgba(248,113,113,.08);color:#f87171;}
+.qfb{margin-top:.9rem;font-size:.83rem;color:var(--muted);display:none;font-style:italic;}
+footer{text-align:center;padding:3.5rem 2rem;font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--muted);}
+footer span{color:var(--acc);}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<nav class="sidebar">
+  <a class="ndot on" href="#hero" data-s="hero"></a>
+  <a class="ndot" href="#deriv" data-s="deriv"></a>
+  <a class="ndot" href="#gd" data-s="gd"></a>
+  <a class="ndot" href="#demo" data-s="demo"></a>
+  <a class="ndot" href="#practice" data-s="practice"></a>
+  <a class="ndot" href="#hw" data-s="hw"></a>
+</nav>
+
+<section class="hero" id="hero">
+  <div class="hero-bg"></div>
+  <svg class="curve-bg" viewBox="0 0 800 200" preserveAspectRatio="none">
+    <path d="M0,160 Q100,80 200,140 Q300,200 400,100 Q500,0 600,80 Q700,160 800,60 L800,200 L0,200Z" fill="rgba(0,212,255,0.3)"/>
+  </svg>
+  <div class="hero-inner">
+    <div class="badge">ДЕНЬ 03 / 90 · ФАЗА I: МАТЕМАТИКА</div>
+    <h1 class="hero-title">Производные и<br><em>градиентный спуск</em></h1>
+    <p class="hero-sub">Как нейросеть обучается — один алгоритм, который стоит за всем: GPT, Claude, Stable Diffusion</p>
+    <div class="meta">
+      <div class="mi"><span class="mv">~70 мин</span><span class="ml">Время</span></div>
+      <div class="mi"><span class="mv">★★★☆☆</span><span class="ml">Сложность</span></div>
+      <div class="mi"><span class="mv">numpy</span><span class="ml">Зависимости</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="deriv">
+<div class="container reveal">
+  <span class="stag">// 01 — производные</span>
+  <h2>Производная — это «наклон» функции</h2>
+  <p>Производная показывает, как быстро меняется функция при небольшом изменении её аргумента. Если <code>f(x) = x²</code>, то производная <code>f'(x) = 2x</code>. При <code>x=3</code> функция «растёт со скоростью 6».</p>
+  <div class="callout">
+    <span class="ctag">// Зачем это нейросетям</span>
+    <p>Нейросеть имеет функцию потерь <code>L</code> (Loss), которая показывает, насколько плохо модель предсказывает. Нам нужно <strong>уменьшить L</strong>. Производная говорит: «сдвинь параметр в эту сторону — и L уменьшится».</p>
+  </div>
+  <h3>Три правила, которые покроют 90% случаев</h3>
+  <div class="fcard"><span class="formula">d/dx [xⁿ] = n·xⁿ⁻¹ &nbsp;&nbsp;&nbsp; d/dx [eˣ] = eˣ &nbsp;&nbsp;&nbsp; d/dx [ln x] = 1/x</span><span class="fdesc">Степенное правило, производная экспоненты, производная логарифма</span></div>
+  <div class="fcard"><span class="formula">Chain Rule: d/dx [f(g(x))] = f'(g(x)) · g'(x)</span><span class="fdesc">Правило цепочки — основа backpropagation. Производная сложной функции = произведение производных.</span></div>
+  <p><strong>Правило цепочки</strong> — самое важное. Backpropagation — это буквально многократное применение chain rule через все слои сети. Мы реализуем его вручную на Дне 7.</p>
+  <div class="callout orange">
+    <span class="ctag">// Числовая производная (для проверки)</span>
+    <p>Если не знаете аналитическую производную — считайте численно:<br>
+    <code>f'(x) ≈ (f(x+h) - f(x-h)) / (2h)</code> при h=0.0001.<br>
+    Это работает всегда и часто используется для проверки аналитических градиентов.</p>
+  </div>
+</div>
+</section>
+
+<section id="gd">
+<div class="container reveal">
+  <span class="stag">// 02 — градиентный спуск</span>
+  <h2>Градиентный спуск</h2>
+  <p>Представьте горный рельеф. Вы стоите в случайной точке и хотите спуститься в долину (минимум функции потерь). Вы смотрите вниз по склону и делаете шаг туда. Повторяете. Это и есть градиентный спуск.</p>
+  <div class="fcard"><span class="formula">w := w − α · ∂L/∂w</span><span class="fdesc">w — параметр (вес), α — learning rate (размер шага), ∂L/∂w — градиент (производная Loss по w)</span></div>
+  <p>Знак «минус» означает, что мы идём <em>против</em> градиента — туда, где функция убывает. Если производная положительна (функция растёт) — уменьшаем w. Если отрицательна — увеличиваем.</p>
+  <h3>Learning Rate — самый важный гиперпараметр</h3>
+  <div class="callout green">
+    <span class="ctag">// Три сценария</span>
+    <p>
+      <strong>α слишком мал</strong> (0.00001) → обучение займёт вечность<br>
+      <strong>α слишком велик</strong> (10.0) → «прыгаем» мимо минимума, расходимся<br>
+      <strong>α в самый раз</strong> (0.01–0.001) → плавно сходимся к минимуму<br><br>
+      GPT-3 обучался с α≈3×10⁻⁴ со scheduler (постепенно уменьшался).
+    </p>
+  </div>
+</div>
+</section>
+
+<section id="demo">
+<div class="container reveal">
+  <span class="stag">// 03 — интерактивно</span>
+  <h2>Посмотрите, как работает спуск</h2>
+  <p>На графике ниже — функция потерь <code>L(w) = (w−3)²</code>. Минимум в точке w=3. Нажимайте «Шаг» и наблюдайте, как градиентный спуск находит минимум.</p>
+  <div class="grad-demo">
+    <h4>// Симуляция градиентного спуска</h4>
+    <canvas id="gdCanvas" width="700" height="300"></canvas>
+    <div class="ctrl">
+      <label>Learning Rate: <span id="lrVal">0.3</span></label>
+      <input type="range" id="lrSlider" min="0.01" max="0.95" step="0.01" value="0.3" oninput="updateLR(this.value)">
+      <button class="step-btn" onclick="stepGD()">▶ Шаг</button>
+      <button class="step-btn" onclick="autoGD()">⚡ Авто</button>
+      <button class="step-btn" onclick="resetGD()">↺ Сброс</button>
+    </div>
+    <div class="info-box" id="gdInfo">w = <span class="v" id="wVal">-2.00</span> &nbsp;|&nbsp; L(w) = <span class="r" id="lVal">25.00</span> &nbsp;|&nbsp; Градиент = <span id="gVal">-10.00</span> &nbsp;|&nbsp; Шаг: <span id="stepNum">0</span></div>
+  </div>
+  <div class="callout">
+    <span class="ctag">// Попробуйте</span>
+    <p>Поставьте lr=0.9 и нажмите Авто — увидите «перелёт». Поставьте lr=0.05 — медленный, но стабильный спуск. Это именно то, с чем борются при обучении LLM.</p>
+  </div>
+</div>
+</section>
+
+<section id="practice">
+<div class="container reveal">
+  <span class="stag">// 04 — практика</span>
+  <h2>Первый обучаемый нейрон</h2>
+  <p>Реализуем линейную регрессию через градиентный спуск. Одна входная переменная, один вес, одно смещение. Это простейшая «нейросеть» — 1 нейрон без функции активации.</p>
+  <div class="cblock">
+    <div class="cheader"><div class="cdots"><div class="cd cd-r"></div><div class="cd cd-y"></div><div class="cd cd-g"></div></div><span class="clang">Python · lesson_03.py</span></div>
+    <div class="cbody"><code><span class="cm"># Урок 3 — Градиентный спуск: обучаем первый нейрон</span>
+<span class="kw">import</span> numpy <span class="kw">as</span> <span class="va">np</span>
+
+<span class="cm"># ─────────────────────────────────────────────
+# Данные: площадь квартиры → цена (условные ед.)
+# ─────────────────────────────────────────────</span>
+<span class="va">X</span> = <span class="va">np</span>.array([<span class="num">30</span>, <span class="num">50</span>, <span class="num">70</span>, <span class="num">90</span>, <span class="num">110</span>], dtype=<span class="fn">float</span>)
+<span class="va">y</span> = <span class="va">np</span>.array([<span class="num">150</span>, <span class="num">250</span>, <span class="num">330</span>, <span class="num">430</span>, <span class="num">520</span>], dtype=<span class="fn">float</span>)
+
+<span class="cm"># Нормализация (важно для стабильности обучения)</span>
+<span class="va">X</span> = (<span class="va">X</span> - <span class="va">X</span>.mean()) / <span class="va">X</span>.std()
+<span class="va">y</span> = (<span class="va">y</span> - <span class="va">y</span>.mean()) / <span class="va">y</span>.std()
+
+<span class="cm"># ─────────────────────────────────────────────
+# Модель: y_hat = w * x + b
+# Loss: MSE = mean((y_hat - y)²)
+# Градиенты аналитически:
+#   ∂L/∂w = 2/N * Σ (y_hat - y) * x
+#   ∂L/∂b = 2/N * Σ (y_hat - y)
+# ─────────────────────────────────────────────</span>
+
+<span class="va">w</span>, <span class="va">b</span> = <span class="num">0.0</span>, <span class="num">0.0</span>   <span class="cm"># инициализация нулями</span>
+<span class="va">lr</span>    = <span class="num">0.1</span>          <span class="cm"># learning rate</span>
+<span class="va">epochs</span> = <span class="num">100</span>
+
+<span class="kw">for</span> epoch <span class="kw">in</span> <span class="fn">range</span>(<span class="va">epochs</span>):
+    <span class="cm"># Forward pass</span>
+    <span class="va">y_hat</span> = <span class="va">w</span> * <span class="va">X</span> + <span class="va">b</span>
+
+    <span class="cm"># Loss (MSE)</span>
+    <span class="va">loss</span> = ((<span class="va">y_hat</span> - <span class="va">y</span>) ** <span class="num">2</span>).mean()
+
+    <span class="cm"># Градиенты (производные Loss по w и b)</span>
+    <span class="va">dw</span> = (<span class="num">2</span> / <span class="fn">len</span>(<span class="va">X</span>)) * ((<span class="va">y_hat</span> - <span class="va">y</span>) * <span class="va">X</span>).sum()
+    <span class="va">db</span> = (<span class="num">2</span> / <span class="fn">len</span>(<span class="va">X</span>)) * (<span class="va">y_hat</span> - <span class="va">y</span>).sum()
+
+    <span class="cm"># Gradient descent step</span>
+    <span class="va">w</span> -= <span class="va">lr</span> * <span class="va">dw</span>
+    <span class="va">b</span> -= <span class="va">lr</span> * <span class="va">db</span>
+
+    <span class="kw">if</span> epoch % <span class="num">10</span> == <span class="num">0</span>:
+        <span class="fn">print</span>(<span class="str">f"Epoch {epoch:3d} | Loss: {loss:.6f} | w={w:.4f} b={b:.4f}"</span>)
+
+<span class="fn">print</span>(<span class="str">f"\nФинал: w={w:.4f}, b={b:.4f}"</span>)
+<span class="fn">print</span>(<span class="str">f"Предсказание для X=80м²: {w * ((80-70)/20.92) + b:.3f} (норм.)"</span>)
+
+<span class="cm"># ─────────────────────────────────────────────
+# ПРОВЕРКА: численный градиент vs аналитический
+# Если разница мала — вы всё правильно сделали
+# ─────────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">loss_fn</span>(w, b):
+    <span class="kw">return</span> (((w * <span class="va">X</span> + b) - <span class="va">y</span>) ** <span class="num">2</span>).mean()
+
+<span class="va">h</span> = <span class="num">1e-5</span>
+<span class="va">dw_num</span> = (<span class="fn">loss_fn</span>(<span class="va">w</span>+<span class="va">h</span>, <span class="va">b</span>) - <span class="fn">loss_fn</span>(<span class="va">w</span>-<span class="va">h</span>, <span class="va">b</span>)) / (<span class="num">2</span>*<span class="va">h</span>)
+<span class="va">dw_ana</span> = (<span class="num">2</span>/<span class="fn">len</span>(<span class="va">X</span>)) * ((<span class="va">w</span>*<span class="va">X</span>+<span class="va">b</span>-<span class="va">y</span>)*<span class="va">X</span>).sum()
+<span class="fn">print</span>(<span class="str">f"\nЧисленный градиент:    {dw_num:.8f}"</span>)
+<span class="fn">print</span>(<span class="str">f"Аналитический градиент: {dw_ana:.8f}"</span>)
+<span class="fn">print</span>(<span class="str">f"Разница: {abs(dw_num - dw_ana):.2e} (должна быть ~1e-8)"</span>)</code></div>
+  </div>
+  <div class="callout green">
+    <span class="ctag">// Что значит каждая строка</span>
+    <p>
+      <code>y_hat = w*X + b</code> — forward pass (предсказание)<br>
+      <code>loss = MSE</code> — насколько мы ошиблись<br>
+      <code>dw, db</code> — в какую сторону двигать веса<br>
+      <code>w -= lr * dw</code> — один шаг обучения<br><br>
+      В PyTorch это делает <code>loss.backward()</code> + <code>optimizer.step()</code> — автоматически.
+    </p>
+  </div>
+</div>
+</section>
+
+<section id="hw">
+<div class="container reveal">
+  <span class="stag">// 05 — задания</span>
+  <h2>Задания к Дню 4</h2>
+  <ul class="tasks">
+    <li><div class="tnum">01</div><div class="ttxt"><strong>Запустите lesson_03.py.</strong> Loss должен монотонно убывать. Попробуйте lr=0.5, lr=0.001, lr=2.0 — опишите, что происходит в каждом случае.</div></li>
+    <li><div class="tnum">02</div><div class="ttxt"><strong>Добавьте несколько признаков.</strong> Добавьте второй столбец X: количество комнат. Обновите формулы градиентов для многомерного случая. Подсказка: теперь w — вектор.</div></li>
+    <li><div class="tnum">03</div><div class="ttxt"><strong>Реализуйте численную производную</strong> <code>numerical_gradient(f, x, h=1e-5)</code>. Проверьте её на функциях <code>x³</code>, <code>sin(x)</code>, <code>e^x</code>. Сравните с аналитическими ответами.</div></li>
+    <li><div class="tnum">★</div><div class="ttxt"><strong>[Продвинутое]</strong> Реализуйте <strong>SGD с momentum</strong>: <code>v = beta*v + (1-beta)*grad; w -= lr*v</code>. Сравните скорость сходства с обычным SGD на тех же данных. beta=0.9 — стандартное значение.</div></li>
+  </ul>
+  <div class="quiz">
+    <div class="quiz-q">🧠 Что произойдёт, если learning rate слишком большой?</div>
+    <div class="qopts">
+      <button class="qopt" onclick="qa(this,false)">A) Обучение замедлится</button>
+      <button class="qopt" onclick="qa(this,true)">B) Loss будет расти или осциллировать — не сходиться</button>
+      <button class="qopt" onclick="qa(this,false)">C) Модель переобучится</button>
+      <button class="qopt" onclick="qa(this,false)">D) Веса станут нулевыми</button>
+    </div>
+    <div class="qfb" id="qfb"></div>
+  </div>
+  <div style="border-top:1px solid var(--border);margin-top:2.5rem;padding-top:2rem;">
+    <span class="stag">// следующий урок</span>
+    <h3>День 4 — Вероятность и функции потерь</h3>
+    <p style="color:var(--muted);font-size:.88rem;">Кросс-энтропия, softmax, почему MSE не подходит для классификации. Реализуем функции потерь для языковой модели.</p>
+  </div>
+</div>
+</section>
+
+<footer><p>КУРС <span>«90 ДНЕЙ ДО СОБСТВЕННОЙ LLM»</span> · ДЕНЬ <span>03</span> / 90</p></footer>
+
+<script>
+window.addEventListener('scroll',()=>{document.getElementById('prog').style.width=(window.scrollY/(document.body.scrollHeight-window.innerHeight)*100)+'%';});
+const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('revealed');}),{threshold:.08});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+const secs=['hero','deriv','gd','demo','practice','hw'];
+window.addEventListener('scroll',()=>{const mid=window.scrollY+window.innerHeight/2;secs.forEach(id=>{const el=document.getElementById(id);const dot=document.querySelector(`[data-s="${id}"]`);if(el&&dot){if(el.offsetTop<=mid&&el.offsetTop+el.offsetHeight>mid){document.querySelectorAll('.ndot').forEach(d=>d.classList.remove('on'));dotclassList.add('on');}}});});
+document.querySelectorAll('.ndot').forEach(d=>d.addEventListener('click',e=>{e.preventDefault();document.getElementById(d.dataset.s)?.scrollIntoView({behavior:'smooth'});}));
+
+// GD Demo
+const canvas=document.getElementById('gdCanvas');
+const ctx=canvas.getContext('2d');
+let w_gd=-2,lr_gd=0.3,steps=0,history=[],autoTimer=null;
+function lossF(w){return (w-3)**2;}
+function gradF(w){return 2*(w-3);}
+function drawGD(){
+  const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#050810';ctx.fillRect(0,0,W,H);
+  // axes
+  const px=v=>(v+3)/9*W;const py=v=>H-20-v/12*(H-40);
+  ctx.strokeStyle='#1c2a3a';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,py(0));ctx.lineTo(W,py(0));ctx.stroke();
+  ctx.beginPath();ctx.moveTo(px(0),0);ctx.lineTo(px(0),H);ctx.stroke();
+  // curve
+  ctx.strokeStyle='#00d4ff';ctx.lineWidth=2;ctx.beginPath();
+  for(let i=0;i<=200;i++){const ww=-3+i*9/200;const ll=lossF(ww);if(i===0)ctx.moveTo(px(ww),py(ll));else ctx.lineTo(px(ww),py(ll));}
+  ctx.stroke();
+  // history dots
+  history.forEach((p,i)=>{ctx.fillStyle=`rgba(255,107,53,${0.3+0.7*i/history.length})`;ctx.beginPath();ctx.arc(px(p.w),py(p.l),3,0,Math.PI*2);ctx.fill();});
+  // current
+  ctx.fillStyle='#ff6b35';ctx.beginPath();ctx.arc(px(w_gd),py(lossF(w_gd)),7,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#ff6b35';ctx.lineWidth=2;ctx.stroke();
+  // tangent
+  const g=gradF(w_gd);const x0=w_gd-1,x1=w_gd+1;
+  ctx.strokeStyle='rgba(127,255,107,0.5)';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(px(x0),py(lossF(w_gd)+g*(x0-w_gd)));ctx.lineTo(px(x1),py(lossF(w_gd)+g*(x1-w_gd)));ctx.stroke();ctx.setLineDash([]);
+  // label
+  ctx.fillStyle='#5a7a90';ctx.font='11px JetBrains Mono';ctx.fillText('L(w) = (w−3)²',10,20);
+  ctx.fillStyle='#00d4ff';ctx.fillText('minimum at w=3',10,36);
+  // update info
+  document.getElementById('wVal').textContent=w_gd.toFixed(4);
+  document.getElementById('lVal').textContent=lossF(w_gd).toFixed(4);
+  document.getElementById('gVal').textContent=gradF(w_gd).toFixed(4);
+  document.getElementById('stepNum').textContent=steps;
+}
+function stepGD(){history.push({w:w_gd,l:lossF(w_gd)});w_gd-=lr_gd*gradF(w_gd);steps++;drawGD();}
+function resetGD(){w_gd=-2;steps=0;history=[];if(autoTimer){clearInterval(autoTimer);autoTimer=null;}drawGD();}
+function updateLR(v){lr_gd=parseFloat(v);document.getElementById('lrVal').textContent=v;}
+function autoGD(){if(autoTimer){clearInterval(autoTimer);autoTimer=null;return;}autoTimer=setInterval(()=>{if(Math.abs(gradF(w_gd))<0.001||steps>200){clearInterval(autoTimer);autoTimer=null;return;}stepGD();},120);}
+drawGD();
+
+function qa(btn,correct){
+  document.querySelectorAll('.qopt').forEach(b=>{b.disabled=true;b.classList.remove('right','wrong');});
+  btn.classList.add(correct?'right':'wrong');
+  if(!correct)document.querySelectorAll('.qopt')[1].classList.add('right');
+  const fb=document.getElementById('qfb');fb.style.display='block';
+  fb.style.color=correct?'#4ade80':'#f87171';
+  fb.textContent=correct?'✓ Верно. Слишком большой шаг — перелетаем через минимум, Loss начинает «прыгать» или расти.':'✗ Неверно. Большой LR → перелёт через минимум → расходимость.';
+}
+</script>
+</body>
+</html>
