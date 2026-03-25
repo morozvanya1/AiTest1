@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>День 4 — Вероятность и функции потерь</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#06080e;--card:#0d111c;--border:#1a2035;--acc:#c084fc;--acc2:#f472b6;--acc3:#34d399;--text:#e2d9f3;--muted:#6b6a85;--code:#040608;}
+*{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;font-size:16px;line-height:1.75;overflow-x:hidden;}
+#prog{position:fixed;top:0;left:0;height:2px;background:var(--acc);z-index:9999;width:0;}
+.sidebar{position:fixed;left:1rem;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:.6rem;z-index:100;}
+@media(max-width:860px){.sidebar{display:none;}}
+.ndot{width:5px;height:5px;border-radius:50%;background:var(--border);display:block;cursor:pointer;transition:all .3s;}
+.ndot:hover,.ndot.on{background:var(--acc);box-shadow:0 0 8px var(--acc);transform:scale(1.7);}
+.hero{min-height:100vh;display:grid;place-items:center;padding:4rem 2rem;border-bottom:1px solid var(--border);position:relative;overflow:hidden;}
+.orbs{position:absolute;inset:0;pointer-events:none;}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);}
+.orb1{width:400px;height:400px;background:rgba(192,132,252,.06);top:-10%;left:-10%;}
+.orb2{width:300px;height:300px;background:rgba(244,114,182,.05);bottom:0;right:0;}
+.hero-inner{position:relative;text-align:center;max-width:800px;}
+.badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.67rem;letter-spacing:.2em;color:var(--acc);border:1px solid rgba(192,132,252,.4);padding:.28rem .9rem;border-radius:2px;margin-bottom:2rem;animation:up .6s .1s both;}
+.hero-title{font-size:clamp(2.5rem,7vw,5rem);font-weight:800;line-height:1.05;margin-bottom:1.5rem;animation:up .6s .25s both;}
+.hero-title em{color:var(--acc);font-style:normal;}
+.hero-title .t2{color:var(--acc2);}
+.hero-sub{font-size:1rem;color:var(--muted);max-width:520px;margin:0 auto 2.5rem;font-weight:400;animation:up .6s .4s both;}
+.meta{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;animation:up .6s .55s both;}
+.mi{display:flex;flex-direction:column;align-items:center;gap:.15rem;}
+.mv{font-family:'JetBrains Mono',monospace;font-size:.88rem;color:var(--acc);}
+.ml{font-size:.6rem;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;}
+@keyframes up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.container{max-width:760px;margin:0 auto;padding:0 2rem;}
+section{padding:4.5rem 0;border-bottom:1px solid var(--border);}
+section:last-of-type{border-bottom:none;}
+.stag{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--acc);display:block;margin-bottom:.7rem;}
+h2{font-size:clamp(1.9rem,4vw,2.9rem);font-weight:800;line-height:1.1;margin-bottom:1.3rem;}
+h3{font-size:1.05rem;font-weight:600;margin:2.2rem 0 .7rem;}
+p{margin-bottom:1.1rem;color:#9d96b8;font-size:.95rem;}
+strong{color:var(--text);}em{color:var(--acc);font-style:normal;}
+code{font-family:'JetBrains Mono',monospace;font-size:.8em;background:var(--card);border:1px solid var(--border);padding:.1em .4em;border-radius:2px;color:var(--acc2);}
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .5s,transform .5s;}.revealed{opacity:1;transform:none;}
+/* probability bar */
+.prob-vis{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:1.5rem;margin:1.5rem 0;}
+.prob-vis h4{font-family:'JetBrains Mono',monospace;font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;color:var(--acc);margin-bottom:1.2rem;}
+.prob-row{display:flex;align-items:center;gap:.8rem;margin-bottom:.6rem;}
+.prob-label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--muted);width:80px;flex-shrink:0;}
+.prob-bar-wrap{flex:1;height:22px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;}
+.prob-bar{height:100%;border-radius:2px;transition:width .5s ease;display:flex;align-items:center;padding-left:.4rem;}
+.prob-bar span{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:rgba(255,255,255,.7);}
+.prob-input{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem;}
+.prob-input input{background:var(--code);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.75rem;padding:.35rem .6rem;border-radius:2px;width:70px;}
+.prob-input button{font-family:'JetBrains Mono',monospace;font-size:.68rem;border:1px solid var(--acc);background:transparent;color:var(--acc);padding:.35rem .8rem;border-radius:2px;cursor:pointer;transition:all .2s;letter-spacing:.08em;text-transform:uppercase;}
+.prob-input button:hover{background:var(--acc);color:var(--bg);}
+.entropy-val{font-family:'JetBrains Mono',monospace;font-size:.78rem;margin-top:.8rem;color:var(--muted);}
+.entropy-val span{color:var(--acc2);}
+/* fcard */
+.fcard{background:var(--code);border:1px solid var(--border);border-radius:4px;padding:1.3rem 1.7rem;margin:1.3rem 0;text-align:center;}
+.formula{font-family:'JetBrains Mono',monospace;font-size:.9rem;color:var(--acc);display:block;margin-bottom:.35rem;}
+.fdesc{font-size:.8rem;color:var(--muted);}
+/* callout */
+.callout{border-left:3px solid var(--acc);background:rgba(192,132,252,.04);padding:1.1rem 1.3rem;border-radius:0 4px 4px 0;margin:1.5rem 0;}
+.callout.pink{border-color:var(--acc2);background:rgba(244,114,182,.04);}
+.callout.green{border-color:var(--acc3);background:rgba(52,211,153,.04);}
+.ctag{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--acc);margin-bottom:.35rem;display:block;}
+.callout.pink .ctag{color:var(--acc2);}.callout.green .ctag{color:var(--acc3);}
+.callout p{margin:0;font-size:.9rem;}
+/* compare table */
+.compare{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.83rem;}
+.compare th{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:.6rem .8rem;border-bottom:1px solid var(--border);text-align:left;}
+.compare td{padding:.7rem .8rem;border-bottom:1px solid rgba(26,32,53,.6);color:#9d96b8;}
+.compare tr:hover td{background:rgba(192,132,252,.03);}
+.compare .hi{color:var(--text);}
+.compare .good{color:var(--acc3);}.compare .bad{color:var(--acc2);}
+/* cblock */
+.cblock{background:var(--code);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin:1.4rem 0;}
+.cheader{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem;border-bottom:1px solid var(--border);}
+.cdots{display:flex;gap:.3rem;}.cd{width:9px;height:9px;border-radius:50%;}.cd-r{background:#f87171;}.cd-y{background:#f0c040;}.cd-g{background:#4ade80;}
+.clang{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;}
+.cbody{padding:1.4rem;overflow-x:auto;}
+.cbody code{font-family:'JetBrains Mono',monospace;font-size:.77rem;line-height:1.85;white-space:pre;display:block;background:none;border:none;padding:0;color:var(--text);}
+.kw{color:#ff7b72;}.fn{color:#d2a8ff;}.str{color:#a5d6ff;}.num{color:#79c0ff;}.cm{color:#3a4060;}.va{color:#ffa657;}
+/* tasks */
+.tasks{list-style:none;margin-top:1.3rem;}
+.tasks li{display:flex;gap:.9rem;align-items:flex-start;background:var(--card);border:1px solid var(--border);border-radius:4px;padding:.9rem 1.1rem;margin-bottom:.5rem;transition:border-color .25s;}
+.tasks li:hover{border-color:var(--acc);}
+.tnum{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--acc);background:rgba(192,132,252,.1);border:1px solid rgba(192,132,252,.25);min-width:25px;height:25px;display:grid;place-items:center;border-radius:2px;flex-shrink:0;}
+.ttxt{font-size:.87rem;color:#9d96b8;line-height:1.5;}.ttxt strong{color:var(--text);}
+.quiz{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:1.8rem;margin-top:2.5rem;}
+.quiz-q{font-weight:600;font-size:.97rem;margin-bottom:1.1rem;}
+.qopts{display:flex;flex-direction:column;gap:.45rem;}
+.qopt{background:#080b14;border:1px solid var(--border);border-radius:3px;padding:.6rem .95rem;font-family:'JetBrains Mono',monospace;font-size:.72rem;cursor:pointer;transition:all .2s;text-align:left;color:var(--muted);}
+.qopt:hover{border-color:var(--acc);color:var(--text);}
+.qopt.right{border-color:#4ade80;background:rgba(74,222,128,.08);color:#4ade80;}
+.qopt.wrong{border-color:#f87171;background:rgba(248,113,113,.08);color:#f87171;}
+.qfb{margin-top:.9rem;font-size:.83rem;color:var(--muted);display:none;}
+footer{text-align:center;padding:3.5rem 2rem;font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--muted);}
+footer span{color:var(--acc);}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<nav class="sidebar">
+  <a class="ndot on" href="#hero" data-s="hero"></a>
+  <a class="ndot" href="#prob" data-s="prob"></a>
+  <a class="ndot" href="#entropy" data-s="entropy"></a>
+  <a class="ndot" href="#loss" data-s="loss"></a>
+  <a class="ndot" href="#practice" data-s="practice"></a>
+  <a class="ndot" href="#hw" data-s="hw"></a>
+</nav>
+
+<section class="hero" id="hero">
+  <div class="orbs"><div class="orb orb1"></div><div class="orb orb2"></div></div>
+  <div class="hero-inner">
+    <div class="badge">ДЕНЬ 04 / 90 · ФАЗА I: МАТЕМАТИКА</div>
+    <h1 class="hero-title">Вероятность &amp;<br><em>функции потерь</em></h1>
+    <p class="hero-sub">Почему языковые модели говорят «вероятность следующего слова» — и как это измерить математически</p>
+    <div class="meta">
+      <div class="mi"><span class="mv">~65 мин</span><span class="ml">Время</span></div>
+      <div class="mi"><span class="mv">★★★☆☆</span><span class="ml">Сложность</span></div>
+      <div class="mi"><span class="mv">numpy</span><span class="ml">Зависимости</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="prob">
+<div class="container reveal">
+  <span class="stag">// 01 — вероятность</span>
+  <h2>Softmax: числа → вероятности</h2>
+  <p>Языковая модель на выходе даёт вектор из ~50 000 чисел — по одному на каждый токен словаря. Эти числа (<em>логиты</em>) надо превратить в вероятности. Для этого используется <strong>softmax</strong>.</p>
+  <div class="fcard"><span class="formula">softmax(zᵢ) = e^zᵢ / Σⱼ e^zʲ</span><span class="fdesc">Экспонента усиливает разницу между числами. Деление нормирует: все вероятности суммируются в 1.</span></div>
+
+  <div class="prob-vis">
+    <h4>// Интерактивно: введите логиты — увидите вероятности</h4>
+    <div id="probBars"></div>
+    <div class="prob-input">
+      <input id="l0" type="number" value="2.1" step="0.1" oninput="updateProb()">
+      <input id="l1" type="number" value="1.0" step="0.1" oninput="updateProb()">
+      <input id="l2" type="number" value="0.5" step="0.1" oninput="updateProb()">
+      <input id="l3" type="number" value="-1.0" step="0.1" oninput="updateProb()">
+      <button onclick="updateProb()">↺ Обновить</button>
+    </div>
+    <div class="entropy-val" id="entropyVal"></div>
+  </div>
+
+  <div class="callout pink">
+    <span class="ctag">// Temperature в LLM</span>
+    <p>Когда вы ставите temperature=0 в Claude — это делит логиты на очень маленькое число перед softmax. Самый вероятный токен получает вероятность ≈1, остальные ≈0. При temperature=1 — стандартный softmax. При temperature=2 — распределение «сглаживается», модель «рандомнее».</p>
+  </div>
+</div>
+</section>
+
+<section id="entropy">
+<div class="container reveal">
+  <span class="stag">// 02 — энтропия</span>
+  <h2>Информационная энтропия</h2>
+  <p>Энтропия измеряет <strong>неопределённость</strong> распределения. Чем равномернее распределение — тем выше энтропия (больше неопределённости). Чем сконцентрированнее — тем ниже.</p>
+  <div class="fcard"><span class="formula">H(p) = −Σᵢ p(i) · log₂ p(i)</span><span class="fdesc">Измеряется в битах. Равномерное распределение из N вариантов: H = log₂(N). Точное предсказание: H = 0.</span></div>
+  <p>В контексте LLM: если модель уверена в следующем слове (энтропия низкая) — она «хорошо обучена» на этом контексте. Высокая энтропия означает «я не знаю, что дальше».</p>
+  <div class="callout">
+    <span class="ctag">// Связь с perplexity</span>
+    <p><strong>Perplexity = 2^H</strong> — стандартная метрика качества LLM. GPT-2 имеет perplexity ~18 на WikiText. GPT-4 — значительно ниже. Чем меньше — тем лучше модель «понимает» язык. Эту метрику вы увидите в каждом paper по LLM.</p>
+  </div>
+</div>
+</section>
+
+<section id="loss">
+<div class="container reveal">
+  <span class="stag">// 03 — функции потерь</span>
+  <h2>Кросс-энтропия — сердце LLM</h2>
+  <p>Языковые модели обучаются минимизировать <em>кросс-энтропийную потерю</em>. Для каждого токена в тексте модель должна угадать следующий — и за ошибку «штрафуется» пропорционально своей уверенности.</p>
+  <div class="fcard"><span class="formula">CE(y, ŷ) = −log(ŷ[correct_token])</span><span class="fdesc">Если модель дала правильному токену вероятность 0.9 → Loss = −log(0.9) = 0.105. Если 0.01 → Loss = 4.6. Чем выше уверенность — тем меньше штраф.</span></div>
+
+  <table class="compare">
+    <tr><th>Функция потерь</th><th>Когда использовать</th><th>В LLM?</th></tr>
+    <tr><td class="hi">MSE (L2)</td><td>Регрессия — предсказание числа</td><td class="bad">Нет</td></tr>
+    <tr><td class="hi">MAE (L1)</td><td>Регрессия, устойчивая к выбросам</td><td class="bad">Нет</td></tr>
+    <tr><td class="hi">Cross-Entropy</td><td>Классификация, предсказание токенов</td><td class="good">Да ✓</td></tr>
+    <tr><td class="hi">KL-Divergence</td><td>Сравнение распределений (RLHF)</td><td class="good">Да ✓</td></tr>
+  </table>
+
+  <div class="callout green">
+    <span class="ctag">// Почему не MSE для языка?</span>
+    <p>Токены — это категории, не числа. Расстояние между токеном 1234 («кошка») и 1235 («собака») бессмысленно. MSE предполагает, что «ошибиться на 1» лучше, чем «ошибиться на 100» — но для токенов это неверно. Кросс-энтропия работает с вероятностями и не предполагает порядка.</p>
+  </div>
+</div>
+</section>
+
+<section id="practice">
+<div class="container reveal">
+  <span class="stag">// 04 — практика</span>
+  <h2>Реализуем Loss для языковой модели</h2>
+  <div class="cblock">
+    <div class="cheader"><div class="cdots"><div class="cd cd-r"></div><div class="cd cd-y"></div><div class="cd cd-g"></div></div><span class="clang">Python · lesson_04.py</span></div>
+    <div class="cbody"><code><span class="cm"># Урок 4 — Вероятность и функции потерь для LLM</span>
+<span class="kw">import</span> numpy <span class="kw">as</span> <span class="va">np</span>
+
+<span class="cm"># ─────────────────────────────────────────────
+# 1. Softmax (стабильная версия)
+# ─────────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">softmax</span>(logits):
+    logits = logits - logits.max()  <span class="cm"># stability trick</span>
+    exp    = np.exp(logits)
+    <span class="kw">return</span> exp / exp.sum()
+
+<span class="cm"># ─────────────────────────────────────────────
+# 2. Кросс-энтропийная потеря (один токен)
+# ─────────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">cross_entropy</span>(probs, target_idx):
+    <span class="str">"""
+    probs:      вектор вероятностей [vocab_size]
+    target_idx: индекс правильного токена
+    """</span>
+    <span class="kw">return</span> -np.log(probs[target_idx] + <span class="num">1e-12</span>)
+
+<span class="cm"># ─────────────────────────────────────────────
+# 3. Loss на батче (несколько токенов)
+# ─────────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">batch_cross_entropy</span>(logits_batch, targets):
+    <span class="str">"""
+    logits_batch: [batch_size × vocab_size]
+    targets:      [batch_size] — индексы правильных токенов
+    """</span>
+    losses = []
+    <span class="kw">for</span> logits, target <span class="kw">in</span> zip(logits_batch, targets):
+        probs = softmax(logits)
+        losses.append(cross_entropy(probs, target))
+    <span class="kw">return</span> np.mean(losses)
+
+<span class="cm"># ─────────────────────────────────────────────
+# 4. Энтропия и Perplexity
+# ─────────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">entropy</span>(probs):
+    probs = probs[probs > <span class="num">0</span>]
+    <span class="kw">return</span> -np.sum(probs * np.log2(probs))
+
+<span class="kw">def</span> <span class="fn">perplexity</span>(loss_nats):
+    <span class="str">"""loss в натуральных логарифмах → perplexity"""</span>
+    <span class="kw">return</span> np.exp(loss_nats)
+
+<span class="cm"># ════════════════════════════════════════════
+# СИМУЛЯЦИЯ: представим маленький словарь из 5 токенов
+# ════════════════════════════════════════════</span>
+vocab = [<span class="str">"кошка"</span>, <span class="str">"собака"</span>, <span class="str">"сидит"</span>, <span class="str">"лежит"</span>, <span class="str">"на"</span>]
+
+<span class="cm"># Контекст: "кошка ___ на"</span>
+<span class="cm"># Правильный ответ: "сидит" (индекс 2)</span>
+
+<span class="cm"># Плохая модель (почти равномерное распределение)</span>
+bad_logits  = np.array([<span class="num">0.2</span>, <span class="num">0.1</span>, <span class="num">0.3</span>, <span class="num">0.1</span>, <span class="num">0.2</span>])
+<span class="cm"># Хорошая модель (уверена в "сидит")</span>
+good_logits = np.array([<span class="num">0.1</span>, <span class="num">-1.0</span>, <span class="num">3.5</span>, <span class="num">-0.5</span>, <span class="num">0.2</span>])
+
+target = <span class="num">2</span>  <span class="cm"># "сидит"</span>
+
+bad_probs  = softmax(bad_logits)
+good_probs = softmax(good_logits)
+
+print(<span class="str">"=== Плохая модель ==="</span>)
+<span class="kw">for</span> w, p <span class="kw">in</span> zip(vocab, bad_probs):
+    print(<span class="str">f"  {w:8s}: {p:.3f} {'←' if w=='сидит' else ''}"</span>)
+print(<span class="str">f"  Loss: {cross_entropy(bad_probs, target):.4f}"</span>)
+print(<span class="str">f"  Perplexity: {perplexity(cross_entropy(bad_probs, target)):.2f}\n"</span>)
+
+print(<span class="str">"=== Хорошая модель ==="</span>)
+<span class="kw">for</span> w, p <span class="kw">in</span> zip(vocab, good_probs):
+    print(<span class="str">f"  {w:8s}: {p:.3f} {'←' if w=='сидит' else ''}"</span>)
+print(<span class="str">f"  Loss: {cross_entropy(good_probs, target):.4f}"</span>)
+print(<span class="str">f"  Perplexity: {perplexity(cross_entropy(good_probs, target)):.2f}\n"</span>)
+
+<span class="cm"># Батч из 3 позиций текста</span>
+print(<span class="str">"=== Батч: Loss по всему предложению ==="</span>)
+batch_logits = np.random.randn(<span class="num">3</span>, <span class="num">5</span>)  <span class="cm"># 3 позиции, словарь 5</span>
+batch_targets = np.array([<span class="num">0</span>, <span class="num">2</span>, <span class="num">4</span>])
+batch_loss = batch_cross_entropy(batch_logits, batch_targets)
+print(<span class="str">f"  Средний Loss на батче: {batch_loss:.4f}"</span>)
+print(<span class="str">f"  Perplexity батча: {perplexity(batch_loss):.2f}"</span>)</code></div>
+  </div>
+</div>
+</section>
+
+<section id="hw">
+<div class="container reveal">
+  <span class="stag">// 05 — задания</span>
+  <h2>Задания к Дню 5</h2>
+  <ul class="tasks">
+    <li><div class="tnum">01</div><div class="ttxt"><strong>Запустите код.</strong> Убедитесь, что «хорошая» модель имеет меньший Loss и Perplexity. Попробуйте сделать идеальную модель: логит для правильного токена = 100. Что происходит с Loss?</div></li>
+    <li><div class="tnum">02</div><div class="ttxt"><strong>Реализуйте температурный sampling.</strong> Функция <code>sample(logits, temperature)</code>: делит логиты на temperature, применяет softmax, затем случайно выбирает токен по весам (используйте <code>np.random.choice</code>). Попробуйте t=0.1, t=1, t=2.</div></li>
+    <li><div class="tnum">03</div><div class="ttxt"><strong>Рассчитайте Perplexity вручную</strong> для фразы «кошка сидит на ковре». Предположите, что модель даёт каждому следующему слову вероятность 0.4. Какой Perplexity для этой последовательности из 5 токенов?</div></li>
+    <li><div class="tnum">★</div><div class="ttxt"><strong>[Продвинутое]</strong> Реализуйте <strong>KL-дивергенцию</strong>: <code>KL(p||q) = Σ p(i) * log(p(i)/q(i))</code>. Это метрика из RLHF — расстояние между «исходной» и «дообученной» моделью. Проверьте: KL(p||p) = 0.</div></li>
+  </ul>
+  <div class="quiz">
+    <div class="quiz-q">🧠 Модель дала правильному токену вероятность 0.5. Каков Cross-Entropy Loss?</div>
+    <div class="qopts">
+      <button class="qopt" onclick="qa(this,false)">A) 0.5</button>
+      <button class="qopt" onclick="qa(this,true)">B) ≈ 0.693</button>
+      <button class="qopt" onclick="qa(this,false)">C) 2.0</button>
+      <button class="qopt" onclick="qa(this,false)">D) 0.0</button>
+    </div>
+    <div class="qfb" id="qfb"></div>
+  </div>
+  <div style="border-top:1px solid var(--border);margin-top:2.5rem;padding-top:2rem;">
+    <span class="stag">// следующий урок</span>
+    <h3>День 5 — Функции активации и первая нейросеть</h3>
+    <p style="color:var(--muted);font-size:.88rem;">ReLU, GELU, Sigmoid — зачем нужна нелинейность. Собираем нейросеть из двух слоёв на NumPy.</p>
+  </div>
+</div>
+</section>
+
+<footer><p>КУРС <span>«90 ДНЕЙ ДО СОБСТВЕННОЙ LLM»</span> · ДЕНЬ <span>04</span> / 90</p></footer>
+
+<script>
+window.addEventListener('scroll',()=>{document.getElementById('prog').style.width=(window.scrollY/(document.body.scrollHeight-window.innerHeight)*100)+'%';});
+const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('revealed');}),{threshold:.08});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+document.querySelectorAll('.ndot').forEach(d=>d.addEventListener('click',e=>{e.preventDefault();document.getElementById(d.dataset.s)?.scrollIntoView({behavior:'smooth'});}));
+
+const tokens=['кошка','собака','сидит','лежит'];
+const colors=['#c084fc','#f472b6','#34d399','#60a5fa'];
+function softmaxJS(arr){const m=Math.max(...arr);const e=arr.map(v=>Math.exp(v-m));const s=e.reduce((a,b)=>a+b);return e.map(v=>v/s);}
+function entropy(p){return -p.reduce((s,v)=>s+(v>0?v*Math.log2(v):0),0);}
+function updateProb(){
+  const logits=[+document.getElementById('l0').value,+document.getElementById('l1').value,+document.getElementById('l2').value,+document.getElementById('l3').value];
+  const probs=softmaxJS(logits);
+  const container=document.getElementById('probBars');
+  container.innerHTML='';
+  probs.forEach((p,i)=>{
+    const row=document.createElement('div');row.className='prob-row';
+    const pct=(p*100).toFixed(1);
+    row.innerHTML=`<div class="prob-label">${tokens[i]}</div><div class="prob-bar-wrap"><div class="prob-bar" style="width:${pct}%;background:${colors[i]}40;border-left:3px solid ${colors[i]}"><span>${pct}%</span></div></div>`;
+    container.appendChild(row);
+  });
+  const H=entropy(probs);
+  document.getElementById('entropyVal').innerHTML=`Энтропия: <span>${H.toFixed(3)}</span> bits &nbsp;|&nbsp; Perplexity: <span>${Math.pow(2,H).toFixed(2)}</span>`;
+}
+updateProb();
+
+function qa(btn,correct){
+  document.querySelectorAll('.qopt').forEach(b=>{b.disabled=true;b.classList.remove('right','wrong');});
+  btn.classList.add(correct?'right':'wrong');
+  if(!correct)document.querySelectorAll('.qopt')[1].classList.add('right');
+  const fb=document.getElementById('qfb');fb.style.display='block';
+  fb.style.color=correct?'#4ade80':'#f87171';
+  fb.textContent=correct?'✓ Верно! CE = −log(0.5) = −(−0.693) = 0.693. Именно поэтому ln(2) ≈ 0.693.':'✗ CE = −log(p) = −log(0.5) = 0.693. Натуральный логарифм 0.5 = −0.693, со знаком минус = 0.693.';
+}
+</script>
+</body>
+</html>

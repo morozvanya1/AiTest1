@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>День 5 — Функции активации и первая нейросеть</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,600;1,300&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080a0f;--card:#0f1218;--border:#1e2430;--acc:#f0b429;--acc2:#ef4444;--acc3:#10b981;--acc4:#3b82f6;--text:#e8e4d8;--muted:#64748b;--code:#060709;}
+*{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;line-height:1.75;overflow-x:hidden;}
+#prog{position:fixed;top:0;left:0;height:3px;background:var(--acc);z-index:9999;width:0;}
+.sidebar{position:fixed;left:1rem;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:.6rem;z-index:100;}
+@media(max-width:860px){.sidebar{display:none;}}
+.ndot{width:5px;height:5px;border-radius:50%;background:var(--border);display:block;cursor:pointer;transition:all .3s;}
+.ndot:hover,.ndot.on{background:var(--acc);box-shadow:0 0 8px var(--acc);transform:scale(1.7);}
+.hero{min-height:100vh;display:grid;place-items:center;padding:4rem 2rem;border-bottom:1px solid var(--border);position:relative;overflow:hidden;background:linear-gradient(180deg,#08060a 0%,var(--bg) 100%);}
+.hero-gfx{position:absolute;inset:0;pointer-events:none;}
+.hero-inner{position:relative;text-align:center;max-width:800px;}
+.badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.67rem;letter-spacing:.2em;color:var(--acc);border:1px solid rgba(240,180,41,.4);padding:.28rem .9rem;border-radius:2px;margin-bottom:2rem;animation:up .6s .1s both;}
+.hero-title{font-size:clamp(2.4rem,7vw,4.8rem);font-weight:600;line-height:1.08;margin-bottom:1.4rem;animation:up .6s .25s both;}
+.hero-title em{color:var(--acc);font-style:normal;}
+.hero-sub{font-size:1rem;color:var(--muted);max-width:500px;margin:0 auto 2.5rem;animation:up .6s .4s both;}
+.meta{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;animation:up .6s .55s both;}
+.mi{display:flex;flex-direction:column;align-items:center;gap:.15rem;}
+.mv{font-family:'JetBrains Mono',monospace;font-size:.88rem;color:var(--acc);}
+.ml{font-size:.6rem;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;}
+@keyframes up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.container{max-width:760px;margin:0 auto;padding:0 2rem;}
+section{padding:4.5rem 0;border-bottom:1px solid var(--border);}
+section:last-of-type{border-bottom:none;}
+.stag{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--acc);display:block;margin-bottom:.7rem;}
+h2{font-size:clamp(1.9rem,4vw,2.8rem);font-weight:600;line-height:1.1;margin-bottom:1.3rem;}
+h3{font-size:1.05rem;font-weight:600;margin:2.2rem 0 .7rem;}
+p{margin-bottom:1.1rem;color:#8a9ab0;font-size:.95rem;}
+strong{color:var(--text);}em{color:var(--acc);font-style:normal;}
+code{font-family:'JetBrains Mono',monospace;font-size:.8em;background:var(--card);border:1px solid var(--border);padding:.1em .4em;border-radius:2px;color:var(--acc);}
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .5s,transform .5s;}.revealed{opacity:1;transform:none;}
+/* activation vis */
+.act-tabs{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;}
+.act-tab{font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--border);background:transparent;color:var(--muted);padding:.35rem .8rem;border-radius:2px;cursor:pointer;transition:all .2s;}
+.act-tab:hover{border-color:var(--acc);color:var(--acc);}
+.act-tab.on{border-color:var(--acc);background:rgba(240,180,41,.1);color:var(--acc);}
+.act-canvas-wrap{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:1rem;}
+.act-info{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--muted);margin-top:.8rem;line-height:1.8;}
+.act-info .hl{color:var(--acc);}
+.act-info .r{color:var(--acc2);}
+.act-info .g{color:var(--acc3);}
+/* fcard */
+.fcard{background:var(--code);border:1px solid var(--border);border-radius:4px;padding:1.3rem 1.7rem;margin:1.3rem 0;text-align:center;}
+.formula{font-family:'JetBrains Mono',monospace;font-size:.88rem;color:var(--acc);display:block;margin-bottom:.35rem;}
+.fdesc{font-size:.8rem;color:var(--muted);}
+/* callout */
+.callout{border-left:3px solid var(--acc);background:rgba(240,180,41,.04);padding:1.1rem 1.3rem;border-radius:0 4px 4px 0;margin:1.5rem 0;}
+.callout.red{border-color:var(--acc2);background:rgba(239,68,68,.04);}
+.callout.green{border-color:var(--acc3);background:rgba(16,185,129,.04);}
+.callout.blue{border-color:var(--acc4);background:rgba(59,130,246,.04);}
+.ctag{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--acc);margin-bottom:.35rem;display:block;}
+.callout.red .ctag{color:var(--acc2);}.callout.green .ctag{color:var(--acc3);}.callout.blue .ctag{color:var(--acc4);}
+.callout p{margin:0;font-size:.9rem;}
+/* network diagram */
+.net-diagram{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:1.5rem;margin:1.5rem 0;overflow:hidden;}
+.net-diagram h4{font-family:'JetBrains Mono',monospace;font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;color:var(--acc);margin-bottom:1rem;}
+/* cblock */
+.cblock{background:var(--code);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin:1.4rem 0;}
+.cheader{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem;border-bottom:1px solid var(--border);}
+.cdots{display:flex;gap:.3rem;}.cd{width:9px;height:9px;border-radius:50%;}.cd-r{background:#f87171;}.cd-y{background:#f0c040;}.cd-g{background:#4ade80;}
+.clang{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;}
+.cbody{padding:1.4rem;overflow-x:auto;}
+.cbody code{font-family:'JetBrains Mono',monospace;font-size:.76rem;line-height:1.85;white-space:pre;display:block;background:none;border:none;padding:0;color:var(--text);}
+.kw{color:#ff7b72;}.fn{color:#d2a8ff;}.str{color:#a5d6ff;}.num{color:#79c0ff;}.cm{color:#364050;}.va{color:#ffa657;}.cl{color:#f0b429;}
+/* tasks */
+.tasks{list-style:none;margin-top:1.3rem;}
+.tasks li{display:flex;gap:.9rem;align-items:flex-start;background:var(--card);border:1px solid var(--border);border-radius:4px;padding:.9rem 1.1rem;margin-bottom:.5rem;transition:border-color .25s;}
+.tasks li:hover{border-color:var(--acc);}
+.tnum{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--acc);background:rgba(240,180,41,.1);border:1px solid rgba(240,180,41,.25);min-width:25px;height:25px;display:grid;place-items:center;border-radius:2px;flex-shrink:0;}
+.ttxt{font-size:.87rem;color:#8a9ab0;line-height:1.5;}.ttxt strong{color:var(--text);}
+.quiz{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:1.8rem;margin-top:2.5rem;}
+.quiz-q{font-weight:600;font-size:.97rem;margin-bottom:1.1rem;}
+.qopts{display:flex;flex-direction:column;gap:.45rem;}
+.qopt{background:#08090d;border:1px solid var(--border);border-radius:3px;padding:.6rem .95rem;font-family:'JetBrains Mono',monospace;font-size:.72rem;cursor:pointer;transition:all .2s;text-align:left;color:var(--muted);}
+.qopt:hover{border-color:var(--acc);color:var(--text);}
+.qopt.right{border-color:#4ade80;background:rgba(74,222,128,.08);color:#4ade80;}
+.qopt.wrong{border-color:#f87171;background:rgba(248,113,113,.08);color:#f87171;}
+.qfb{margin-top:.9rem;font-size:.83rem;color:var(--muted);display:none;}
+footer{text-align:center;padding:3.5rem 2rem;font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--muted);}
+footer span{color:var(--acc);}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<nav class="sidebar">
+  <a class="ndot on" href="#hero" data-s="hero"></a>
+  <a class="ndot" href="#act" data-s="act"></a>
+  <a class="ndot" href="#why" data-s="why"></a>
+  <a class="ndot" href="#arch" data-s="arch"></a>
+  <a class="ndot" href="#practice" data-s="practice"></a>
+  <a class="ndot" href="#hw" data-s="hw"></a>
+</nav>
+
+<section class="hero" id="hero">
+  <div class="hero-gfx">
+    <svg width="100%" height="100%" style="position:absolute;inset:0;opacity:.04">
+      <defs><radialGradient id="rg"><stop offset="0%" stop-color="#f0b429"/><stop offset="100%" stop-color="transparent"/></radialGradient></defs>
+      <circle cx="70%" cy="30%" r="300" fill="url(#rg)"/>
+    </svg>
+  </div>
+  <div class="hero-inner">
+    <div class="badge">ДЕНЬ 05 / 90 · ФАЗА I: МАТЕМАТИКА</div>
+    <h1 class="hero-title">Функции активации<br>и <em>первая нейросеть</em></h1>
+    <p class="hero-sub">Зачем нужна нелинейность и как собрать нейросеть с нуля, не касаясь PyTorch</p>
+    <div class="meta">
+      <div class="mi"><span class="mv">~80 мин</span><span class="ml">Время</span></div>
+      <div class="mi"><span class="mv">★★★★☆</span><span class="ml">Сложность</span></div>
+      <div class="mi"><span class="mv">numpy</span><span class="ml">Зависимости</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="act">
+<div class="container reveal">
+  <span class="stag">// 01 — функции активации</span>
+  <h2>Зачем вообще нужна активация?</h2>
+  <p>Без функции активации нейросеть — это просто серия умножений матриц. Сколько бы слоёв мы ни добавляли, итог можно свернуть в <strong>одно линейное преобразование</strong>. Нелинейная функция активации «ломает» эту линейность и позволяет сети выучивать сложные паттерны.</p>
+
+  <div class="act-tabs">
+    <button class="act-tab on" onclick="setAct('relu')">ReLU</button>
+    <button class="act-tab" onclick="setAct('gelu')">GELU</button>
+    <button class="act-tab" onclick="setAct('sigmoid')">Sigmoid</button>
+    <button class="act-tab" onclick="setAct('tanh')">Tanh</button>
+    <button class="act-tab" onclick="setAct('silu')">SiLU</button>
+  </div>
+
+  <div class="act-canvas-wrap">
+    <canvas id="actCanvas" width="700" height="240"></canvas>
+  </div>
+  <div class="act-info" id="actInfo"></div>
+</div>
+</section>
+
+<section id="why">
+<div class="container reveal">
+  <span class="stag">// 02 — выбор активации</span>
+  <h2>Какую использовать в трансформере?</h2>
+
+  <div class="callout">
+    <span class="ctag">// ReLU — классика</span>
+    <p><code>ReLU(x) = max(0, x)</code> — простая, быстрая, работает хорошо. Проблема: «умирающие нейроны» — если нейрон всегда получает x&lt;0, он никогда не обучается (градиент = 0).</p>
+  </div>
+  <div class="callout green">
+    <span class="ctag">// GELU — стандарт в трансформерах</span>
+    <p><code>GELU(x) = x · Φ(x)</code>, где Φ — функция нормального распределения. Используется в BERT, GPT, Claude. Более «плавная», чем ReLU. Нет проблемы умирающих нейронов. Немного медленнее считается.</p>
+  </div>
+  <div class="callout blue">
+    <span class="ctag">// SwiGLU — в современных LLM</span>
+    <p>LLaMA, Mistral, Claude 3 используют <strong>SwiGLU</strong> — вариацию активации с gating-механизмом. На 5–10% лучше GELU на языковых задачах. Реализуем на Дне 36.</p>
+  </div>
+  <div class="callout red">
+    <span class="ctag">// Sigmoid — только на выходе</span>
+    <p>Sigmoid отжил своё во внутренних слоях: страдает от <strong>vanishing gradient</strong> (градиент стремится к 0 на краях). Остался только для бинарной классификации на последнем слое.</p>
+  </div>
+</div>
+</section>
+
+<section id="arch">
+<div class="container reveal">
+  <span class="stag">// 03 — архитектура</span>
+  <h2>Анатомия двуслойной нейросети</h2>
+  <p>Собираем нейросеть <strong>вручную</strong>: входной слой → скрытый слой + ReLU → выходной слой + Softmax. Это точная копия архитектуры FFN-блока внутри трансформера.</p>
+
+  <div class="net-diagram">
+    <h4>// Архитектура: XOR-задача (2 входа → 1 выход)</h4>
+    <canvas id="netCanvas" width="680" height="200"></canvas>
+  </div>
+
+  <div class="fcard">
+    <span class="formula">y = Softmax( ReLU(X · W₁ + b₁) · W₂ + b₂ )</span>
+    <span class="fdesc">Forward pass двуслойной сети. W₁, b₁, W₂, b₂ — обучаемые параметры.</span>
+  </div>
+</div>
+</section>
+
+<section id="practice">
+<div class="container reveal">
+  <span class="stag">// 04 — практика</span>
+  <h2>Нейросеть на NumPy: решаем XOR</h2>
+  <p>XOR — классическая задача, которую линейная модель не может решить. Нейросеть с одним скрытым слоем — может. Обучаем через градиентный спуск (пока без backprop — используем численные градиенты).</p>
+  <div class="cblock">
+    <div class="cheader"><div class="cdots"><div class="cd cd-r"></div><div class="cd cd-y"></div><div class="cd cd-g"></div></div><span class="clang">Python · lesson_05.py</span></div>
+    <div class="cbody"><code><span class="cm"># Урок 5 — Первая нейросеть: решаем XOR на NumPy</span>
+<span class="kw">import</span> numpy <span class="kw">as</span> <span class="va">np</span>
+
+np.random.seed(<span class="num">42</span>)
+
+<span class="cm"># ─────────────────────────────────────────────
+# Функции активации и их производные
+# ─────────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">relu</span>(x):          <span class="kw">return</span> np.maximum(<span class="num">0</span>, x)
+<span class="kw">def</span> <span class="fn">relu_grad</span>(x):     <span class="kw">return</span> (x > <span class="num">0</span>).astype(<span class="fn">float</span>)
+
+<span class="kw">def</span> <span class="fn">sigmoid</span>(x):       <span class="kw">return</span> <span class="num">1</span> / (<span class="num">1</span> + np.exp(-np.clip(x, -<span class="num">500</span>, <span class="num">500</span>)))
+<span class="kw">def</span> <span class="fn">sigmoid_grad</span>(x):
+    s = sigmoid(x)
+    <span class="kw">return</span> s * (<span class="num">1</span> - s)
+
+<span class="kw">def</span> <span class="fn">gelu</span>(x):
+    <span class="str">"""GELU approx: x * sigmoid(1.702 * x)"""</span>
+    <span class="kw">return</span> x * sigmoid(<span class="num">1.702</span> * x)
+
+<span class="cm"># ─────────────────────────────────────────────
+# Двуслойная нейросеть (класс)
+# Вход: 2 → Скрытый: 4 → Выход: 1
+# ─────────────────────────────────────────────</span>
+<span class="kw">class</span> <span class="cl">TwoLayerNet</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, in_dim, hidden_dim, out_dim):
+        <span class="cm"># Xavier/Glorot инициализация</span>
+        scale1 = np.sqrt(<span class="num">2.0</span> / in_dim)
+        scale2 = np.sqrt(<span class="num">2.0</span> / hidden_dim)
+        self.W1 = np.random.randn(in_dim, hidden_dim) * scale1
+        self.b1 = np.zeros(hidden_dim)
+        self.W2 = np.random.randn(hidden_dim, out_dim) * scale2
+        self.b2 = np.zeros(out_dim)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, X):
+        <span class="cm"># Скрытый слой</span>
+        self.z1 = X @ self.W1 + self.b1
+        self.a1 = relu(self.z1)
+        <span class="cm"># Выходной слой</span>
+        self.z2 = self.a1 @ self.W2 + self.b2
+        self.a2 = sigmoid(self.z2)
+        <span class="kw">return</span> self.a2
+
+    <span class="kw">def</span> <span class="fn">loss</span>(self, X, y):
+        pred = self.forward(X)
+        <span class="cm"># Binary Cross-Entropy</span>
+        eps = <span class="num">1e-12</span>
+        <span class="kw">return</span> -np.mean(y * np.log(pred+eps) + (<span class="num">1</span>-y) * np.log(<span class="num">1</span>-pred+eps))
+
+    <span class="kw">def</span> <span class="fn">backward</span>(self, X, y):
+        <span class="str">"""Ручной backpropagation через chain rule"""</span>
+        N = X.shape[<span class="num">0</span>]
+        pred = self.a2
+
+        <span class="cm"># Градиент выходного слоя</span>
+        dz2 = (pred - y) / N
+        dW2 = self.a1.T @ dz2
+        db2 = dz2.sum(axis=<span class="num">0</span>)
+
+        <span class="cm"># Градиент скрытого слоя (chain rule!)</span>
+        da1 = dz2 @ self.W2.T
+        dz1 = da1 * relu_grad(self.z1)
+        dW1 = X.T @ dz1
+        db1 = dz1.sum(axis=<span class="num">0</span>)
+
+        <span class="kw">return</span> {<span class="str">'W1'</span>: dW1, <span class="str">'b1'</span>: db1, <span class="str">'W2'</span>: dW2, <span class="str">'b2'</span>: db2}
+
+    <span class="kw">def</span> <span class="fn">step</span>(self, grads, lr):
+        self.W1 -= lr * grads[<span class="str">'W1'</span>]
+        self.b1 -= lr * grads[<span class="str">'b1'</span>]
+        self.W2 -= lr * grads[<span class="str">'W2'</span>]
+        self.b2 -= lr * grads[<span class="str">'b2'</span>]
+
+<span class="cm"># ════════════════════════════════════════════
+# ДАННЫЕ: XOR
+# (0,0)→0  (0,1)→1  (1,0)→1  (1,1)→0
+# Линейно неразделимо! Нужен скрытый слой.
+# ════════════════════════════════════════════</span>
+X = np.array([[<span class="num">0</span>,<span class="num">0</span>],[<span class="num">0</span>,<span class="num">1</span>],[<span class="num">1</span>,<span class="num">0</span>],[<span class="num">1</span>,<span class="num">1</span>]], dtype=<span class="fn">float</span>)
+y = np.array([[<span class="num">0</span>],[<span class="num">1</span>],[<span class="num">1</span>],[<span class="num">0</span>]], dtype=<span class="fn">float</span>)
+
+net = TwoLayerNet(in_dim=<span class="num">2</span>, hidden_dim=<span class="num">8</span>, out_dim=<span class="num">1</span>)
+
+<span class="kw">for</span> epoch <span class="kw">in</span> <span class="fn">range</span>(<span class="num">2000</span>):
+    net.forward(X)
+    grads = net.backward(X, y)
+    net.step(grads, lr=<span class="num">0.5</span>)
+
+    <span class="kw">if</span> epoch % <span class="num">200</span> == <span class="num">0</span>:
+        l = net.loss(X, y)
+        <span class="fn">print</span>(<span class="str">f"Epoch {epoch:4d} | Loss: {l:.5f}"</span>)
+
+<span class="fn">print</span>(<span class="str">"\n=== Предсказания ==="</span>)
+preds = net.forward(X)
+<span class="kw">for</span> xi, yi, pi <span class="kw">in</span> zip(X, y, preds):
+    label = <span class="str">"✓"</span> <span class="kw">if</span> (pi[<span class="num">0</span>]>.5) == yi[<span class="num">0</span>] <span class="kw">else</span> <span class="str">"✗"</span>
+    <span class="fn">print</span>(<span class="str">f"  {xi} → правда:{int(yi[0])} | pred:{pi[0]:.3f} {label}"</span>)</code></div>
+  </div>
+  <div class="callout green">
+    <span class="ctag">// Что вы реализовали</span>
+    <p>Полноценный backpropagation через chain rule — вручную, без автодиффа. Это именно то, что делает <code>loss.backward()</code> в PyTorch. Теперь вы понимаете, что происходит «под капотом».</p>
+  </div>
+</div>
+</section>
+
+<section id="hw">
+<div class="container reveal">
+  <span class="stag">// 05 — задания</span>
+  <h2>Задания к Дню 6</h2>
+  <ul class="tasks">
+    <li><div class="tnum">01</div><div class="ttxt"><strong>Запустите lesson_05.py.</strong> Loss должен упасть ниже 0.01 к эпохе 2000. Замените ReLU на GELU (функция уже написана) — сравните скорость сходства.</div></li>
+    <li><div class="tnum">02</div><div class="ttxt"><strong>Увеличьте сеть:</strong> добавьте третий слой (сделайте ThreeLayerNet). Как меняется скорость обучения? Подсказка: нужно добавить ещё один backward-шаг через chain rule.</div></li>
+    <li><div class="tnum">03</div><div class="ttxt"><strong>Проверьте градиенты численно.</strong> Используйте функцию из Дня 3 <code>numerical_gradient</code> для проверки dW1. Разница должна быть &lt; 1e-5.</div></li>
+    <li><div class="tnum">★</div><div class="ttxt"><strong>[Продвинутое]</strong> Реализуйте <strong>batch normalization</strong> после первого слоя: нормализуйте a1 по батчу перед передачей в следующий слой. Это ключевой компонент стабильного обучения глубоких сетей.</div></li>
+  </ul>
+  <div class="quiz">
+    <div class="quiz-q">🧠 Почему нельзя использовать линейную функцию активации во всех слоях?</div>
+    <div class="qopts">
+      <button class="qopt" onclick="qa(this,false)">A) Линейные функции слишком медленно считаются</button>
+      <button class="qopt" onclick="qa(this,true)">B) Вся сеть сводится к одному линейному преобразованию — теряется глубина</button>
+      <button class="qopt" onclick="qa(this,false)">C) Градиенты становятся слишком большими</button>
+      <button class="qopt" onclick="qa(this,false)">D) Линейные функции не дифференцируемы</button>
+    </div>
+    <div class="qfb" id="qfb"></div>
+  </div>
+  <div style="border-top:1px solid var(--border);margin-top:2.5rem;padding-top:2rem;">
+    <span class="stag">// следующий урок</span>
+    <h3>День 6 — Инициализация весов и регуляризация</h3>
+    <p style="color:var(--muted);font-size:.88rem;">Xavier, He, Dropout, Weight Decay — почему случайные числа имеют значение и как не дать сети переобучиться.</p>
+  </div>
+</div>
+</section>
+
+<footer><p>КУРС <span>«90 ДНЕЙ ДО СОБСТВЕННОЙ LLM»</span> · ДЕНЬ <span>05</span> / 90</p></footer>
+
+<script>
+window.addEventListener('scroll',()=>{document.getElementById('prog').style.width=(window.scrollY/(document.body.scrollHeight-window.innerHeight)*100)+'%';});
+const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('revealed');}),{threshold:.08});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+document.querySelectorAll('.ndot').forEach(d=>d.addEventListener('click',e=>{e.preventDefault();document.getElementById(d.dataset.s)?.scrollIntoView({behavior:'smooth'});}));
+
+// activation functions
+const acts={
+  relu:{fn:x=>Math.max(0,x),color:'#f0b429',label:'ReLU(x) = max(0, x)',note:'Быстрая, стандартная. Умирающий нейрон при x<0 (градиент=0). Используется в ResNet, VGG.',deriv:'1 при x>0, 0 при x<0',use:'Скрытые слои CNN, FFN'},
+  gelu:{fn:x=>x*(1/(1+Math.exp(-1.702*x))),color:'#10b981',label:'GELU(x) = x · Φ(x)',note:'Стандарт в трансформерах: BERT, GPT-2/3, Claude. Плавная, нет мертвых нейронов. Немного медленнее ReLU.',deriv:'Φ(x) + x·φ(x)',use:'GPT, BERT, Трансформеры'},
+  sigmoid:{fn:x=>1/(1+Math.exp(-x)),color:'#ef4444',label:'σ(x) = 1/(1+e^−x)',note:'Устаревшая для скрытых слоёв (vanishing gradient). Используется на выходе для бинарной классификации.',deriv:'σ(x)·(1−σ(x)) → мало при |x|>3',use:'Последний слой, Gates в LSTM'},
+  tanh:{fn:x=>Math.tanh(x),color:'#3b82f6',label:'tanh(x) = (eˣ−e⁻ˣ)/(eˣ+e⁻ˣ)',note:'Выход в [-1, 1]. Лучше Sigmoid для внутренних слоёв. Всё ещё страдает vanishing gradient. Используется в RNN.',deriv:'1 − tanh²(x)',use:'RNN, LSTM, GRU'},
+  silu:{fn:x=>x*(1/(1+Math.exp(-x))),color:'#a78bfa',label:'SiLU(x) = x · σ(x)',note:'Используется в LLaMA, Mistral. Основа SwiGLU-варианта. Хорошая сходимость на больших моделях.',deriv:'σ(x) + x·σ(x)·(1−σ(x))',use:'LLaMA, Mistral, современные LLM'}
+};
+
+let curAct='relu';
+function setAct(name){curAct=name;document.querySelectorAll('.act-tab').forEach((t,i)=>t.classList.toggle('on',['relu','gelu','sigmoid','tanh','silu'][i]===name));drawAct();}
+function drawAct(){
+  const cv=document.getElementById('actCanvas'),ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height,a=acts[curAct];
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#0f1218';ctx.fillRect(0,0,W,H);
+  const px=x=>(x+4)/8*W;const py=y=>H/2-y*H/4;
+  ctx.strokeStyle='#1e2430';ctx.lineWidth=1;
+  [-3,-2,-1,0,1,2,3].forEach(v=>{ctx.beginPath();ctx.moveTo(px(v),0);ctx.lineTo(px(v),H);ctx.stroke();ctx.beginPath();ctx.moveTo(0,py(v));ctx.lineTo(W,py(v));ctx.stroke();});
+  ctx.strokeStyle='#2a3545';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,py(0));ctx.lineTo(W,py(0));ctx.stroke();ctx.beginPath();ctx.moveTo(px(0),0);ctx.lineTo(px(0),H);ctx.stroke();
+  ctx.strokeStyle=a.color;ctx.lineWidth=2.5;ctx.beginPath();
+  for(let i=0;i<=400;i++){const x=-4+i*8/400;const y=a.fn(x);if(i===0)ctx.moveTo(px(x),py(y));else ctx.lineTo(px(x),py(y));}ctx.stroke();
+  ctx.fillStyle='#3a4050';ctx.font='11px JetBrains Mono';
+  [-3,-2,-1,1,2,3].forEach(v=>{ctx.fillText(v,px(v)+3,py(0)+12);});
+  document.getElementById('actInfo').innerHTML=`<span class="hl">${a.label}</span><br>Производная: <span class="g">${a.deriv}</span><br>Используется в: <span class="r">${a.use}</span><br><br>${a.note}`;
+}
+drawAct();
+
+// network diagram
+(function(){
+  const cv=document.getElementById('netCanvas'),ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  ctx.fillStyle='#0f1218';ctx.fillRect(0,0,W,H);
+  const layers=[[2,['x₁','x₂']],[4,['h₁','h₂','h₃','h₄']],[1,['ŷ']]];
+  const colors=['#3b82f6','#f0b429','#10b981'];
+  const xs=[120,340,560];
+  const positions=layers.map((l,li)=>{const n=l[0];return Array.from({length:n},(_,i)=>({x:xs[li],y:H/2-(n-1)*30+i*60}));});
+  positions.forEach((layer,li)=>{if(li===layers.length-1)return;layer.forEach(from=>{positions[li+1].forEach(to=>{ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(from.x,from.y);ctx.lineTo(to.x,to.y);ctx.stroke();});});});
+  positions.forEach((layer,li)=>{layer.forEach((p,i)=>{ctx.beginPath();ctx.arc(p.x,p.y,18,0,Math.PI*2);ctx.fillStyle=colors[li]+'22';ctx.fill();ctx.strokeStyle=colors[li];ctx.lineWidth=2;ctx.stroke();ctx.fillStyle=colors[li];ctx.font='12px JetBrains Mono';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(layers[li][1][i],p.x,p.y);});});
+  const lbls=['Вход (2)','Скрытый ReLU (4)','Выход Sigmoid'];
+  xs.forEach((x,i)=>{ctx.fillStyle='#64748b';ctx.font='11px JetBrains Mono';ctx.textAlign='center';ctx.fillText(lbls[i],x,H-12);});
+  const arrows=['W₁·x+b₁','W₂·a₁+b₂'];
+  [200,450].forEach((x,i)=>{ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='10px JetBrains Mono';ctx.textAlign='center';ctx.fillText(arrows[i],x,12);});
+})();
+
+function qa(btn,correct){
+  document.querySelectorAll('.qopt').forEach(b=>{b.disabled=true;b.classList.remove('right','wrong');});
+  btn.classList.add(correct?'right':'wrong');
+  if(!correct)document.querySelectorAll('.qopt')[1].classList.add('right');
+  const fb=document.getElementById('qfb');fb.style.display='block';
+  fb.style.color=correct?'#4ade80':'#f87171';
+  fb.textContent=correct?'✓ Верно! f(g(h(x))) = (f∘g∘h)(x) — всё ещё линейно. Нелинейность разрывает это и позволяет аппроксимировать произвольные функции.':'✗ Неверно. Состав линейных функций — линейная функция. Без нелинейности глубина бессмысленна.';
+}
+</script>
+</body>
+</html>
