@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>День 6 — Инициализация весов и регуляризация</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050a08;--card:#0b120e;--border:#162019;--acc:#22c55e;--acc2:#fb923c;--acc3:#38bdf8;--text:#d8f0e0;--muted:#4a6b56;--code:#030605;}
+*{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:16px;line-height:1.75;overflow-x:hidden;}
+#prog{position:fixed;top:0;left:0;height:2px;background:var(--acc);z-index:9999;width:0;}
+.sidebar{position:fixed;left:1rem;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:.6rem;z-index:100;}
+@media(max-width:860px){.sidebar{display:none;}}
+.ndot{width:5px;height:5px;border-radius:50%;background:var(--border);display:block;cursor:pointer;transition:all .3s;}
+.ndot:hover,.ndot.on{background:var(--acc);box-shadow:0 0 8px var(--acc);transform:scale(1.7);}
+.hero{min-height:100vh;display:grid;place-items:center;padding:4rem 2rem;border-bottom:1px solid var(--border);position:relative;overflow:hidden;}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px;opacity:.3;}
+.hero-inner{position:relative;text-align:center;max-width:800px;}
+.badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.67rem;letter-spacing:.2em;color:var(--acc);border:1px solid rgba(34,197,94,.4);padding:.28rem .9rem;border-radius:2px;margin-bottom:2rem;animation:up .6s .1s both;}
+.hero-title{font-size:clamp(2.2rem,6.5vw,4.5rem);font-weight:600;line-height:1.08;margin-bottom:1.4rem;animation:up .6s .25s both;}
+.hero-title em{color:var(--acc);font-style:normal;}
+.hero-sub{font-size:1rem;color:var(--muted);max-width:520px;margin:0 auto 2.5rem;animation:up .6s .4s both;}
+.meta{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;animation:up .6s .55s both;}
+.mi{display:flex;flex-direction:column;align-items:center;gap:.15rem;}
+.mv{font-family:'JetBrains Mono',monospace;font-size:.88rem;color:var(--acc);}
+.ml{font-size:.6rem;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;}
+@keyframes up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.container{max-width:760px;margin:0 auto;padding:0 2rem;}
+section{padding:4.5rem 0;border-bottom:1px solid var(--border);}
+section:last-of-type{border-bottom:none;}
+.stag{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--acc);display:block;margin-bottom:.7rem;}
+h2{font-size:clamp(1.9rem,4vw,2.8rem);font-weight:600;line-height:1.1;margin-bottom:1.3rem;}
+h3{font-size:1.05rem;font-weight:600;margin:2.2rem 0 .7rem;}
+p{margin-bottom:1.1rem;color:#7aa88a;font-size:.95rem;}
+strong{color:var(--text);}em{color:var(--acc);font-style:normal;}
+code{font-family:'JetBrains Mono',monospace;font-size:.8em;background:var(--card);border:1px solid var(--border);padding:.1em .4em;border-radius:2px;color:var(--acc3);}
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .5s,transform .5s;}.revealed{opacity:1;transform:none;}
+/* histogram */
+.hist-demo{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:1.4rem;margin:1.4rem 0;}
+.hist-demo h4{font-family:'JetBrains Mono',monospace;font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;color:var(--acc);margin-bottom:.8rem;}
+.hist-tabs{display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap;}
+.htab{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.08em;border:1px solid var(--border);background:transparent;color:var(--muted);padding:.3rem .7rem;border-radius:2px;cursor:pointer;transition:all .2s;}
+.htab:hover{border-color:var(--acc);color:var(--acc);}
+.htab.on{border-color:var(--acc);background:rgba(34,197,94,.1);color:var(--acc);}
+/* fcard */
+.fcard{background:var(--code);border:1px solid var(--border);border-radius:4px;padding:1.3rem 1.7rem;margin:1.3rem 0;text-align:center;}
+.formula{font-family:'JetBrains Mono',monospace;font-size:.88rem;color:var(--acc);display:block;margin-bottom:.35rem;}
+.fdesc{font-size:.8rem;color:var(--muted);}
+.callout{border-left:3px solid var(--acc);background:rgba(34,197,94,.04);padding:1.1rem 1.3rem;border-radius:0 4px 4px 0;margin:1.5rem 0;}
+.callout.orange{border-color:var(--acc2);background:rgba(251,146,60,.04);}
+.callout.blue{border-color:var(--acc3);background:rgba(56,189,248,.04);}
+.ctag{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--acc);margin-bottom:.35rem;display:block;}
+.callout.orange .ctag{color:var(--acc2);}.callout.blue .ctag{color:var(--acc3);}
+.callout p{margin:0;font-size:.9rem;}
+.cblock{background:var(--code);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin:1.4rem 0;}
+.cheader{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem;border-bottom:1px solid var(--border);}
+.cdots{display:flex;gap:.3rem;}.cd{width:9px;height:9px;border-radius:50%;}.cd-r{background:#f87171;}.cd-y{background:#f0c040;}.cd-g{background:#4ade80;}
+.clang{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;}
+.cbody{padding:1.4rem;overflow-x:auto;}
+.cbody code{font-family:'JetBrains Mono',monospace;font-size:.76rem;line-height:1.85;white-space:pre;display:block;background:none;border:none;padding:0;color:var(--text);}
+.kw{color:#ff7b72;}.fn{color:#d2a8ff;}.str{color:#a5d6ff;}.num{color:#79c0ff;}.cm{color:#2a4030;}.va{color:#ffa657;}.cl{color:#22c55e;}
+.tasks{list-style:none;margin-top:1.3rem;}
+.tasks li{display:flex;gap:.9rem;align-items:flex-start;background:var(--card);border:1px solid var(--border);border-radius:4px;padding:.9rem 1.1rem;margin-bottom:.5rem;transition:border-color .25s;}
+.tasks li:hover{border-color:var(--acc);}
+.tnum{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--acc);background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);min-width:25px;height:25px;display:grid;place-items:center;border-radius:2px;flex-shrink:0;}
+.ttxt{font-size:.87rem;color:#7aa88a;line-height:1.5;}.ttxt strong{color:var(--text);}
+.quiz{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:1.8rem;margin-top:2.5rem;}
+.quiz-q{font-weight:600;font-size:.97rem;margin-bottom:1.1rem;}
+.qopts{display:flex;flex-direction:column;gap:.45rem;}
+.qopt{background:#06090a;border:1px solid var(--border);border-radius:3px;padding:.6rem .95rem;font-family:'JetBrains Mono',monospace;font-size:.72rem;cursor:pointer;transition:all .2s;text-align:left;color:var(--muted);}
+.qopt:hover{border-color:var(--acc);color:var(--text);}
+.qopt.right{border-color:#4ade80;background:rgba(74,222,128,.08);color:#4ade80;}
+.qopt.wrong{border-color:#f87171;background:rgba(248,113,113,.08);color:#f87171;}
+.qfb{margin-top:.9rem;font-size:.83rem;color:var(--muted);display:none;}
+footer{text-align:center;padding:3.5rem 2rem;font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--muted);}
+footer span{color:var(--acc);}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<nav class="sidebar">
+  <a class="ndot on" href="#hero" data-s="hero"></a>
+  <a class="ndot" href="#init" data-s="init"></a>
+  <a class="ndot" href="#reg" data-s="reg"></a>
+  <a class="ndot" href="#dropout" data-s="dropout"></a>
+  <a class="ndot" href="#practice" data-s="practice"></a>
+  <a class="ndot" href="#hw" data-s="hw"></a>
+</nav>
+
+<section class="hero" id="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-inner">
+    <div class="badge">ДЕНЬ 06 / 90 · ФАЗА I: МАТЕМАТИКА</div>
+    <h1 class="hero-title">Инициализация весов<br>и <em>регуляризация</em></h1>
+    <p class="hero-sub">Почему случайные числа имеют значение — и как не дать нейросети «зазубрить» обучающие данные</p>
+    <div class="meta">
+      <div class="mi"><span class="mv">~65 мин</span><span class="ml">Время</span></div>
+      <div class="mi"><span class="mv">★★★☆☆</span><span class="ml">Сложность</span></div>
+      <div class="mi"><span class="mv">numpy</span><span class="ml">Зависимости</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="init">
+<div class="container reveal">
+  <span class="stag">// 01 — инициализация</span>
+  <h2>Начальные веса — не «просто случайные»</h2>
+  <p>Казалось бы: берём случайные числа и обучаем. Но <strong>масштаб</strong> этих чисел критически важен. Слишком большие → сигнал взрывается через слои. Слишком маленькие → сигнал затухает. Обе ситуации = сеть не обучается.</p>
+
+  <div class="hist-demo">
+    <h4>// Распределение активаций на глубокой сети (10 слоёв)</h4>
+    <div class="hist-tabs">
+      <button class="htab on" onclick="setInit('zeros')">Нули</button>
+      <button class="htab" onclick="setInit('large')">Слишком большие</button>
+      <button class="htab" onclick="setInit('small')">Слишком малые</button>
+      <button class="htab" onclick="setInit('xavier')">Xavier ✓</button>
+      <button class="htab" onclick="setInit('he')">He ✓</button>
+    </div>
+    <canvas id="histCanvas" width="700" height="200"></canvas>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted);margin-top:.7rem;" id="initInfo"></div>
+  </div>
+
+  <div class="fcard"><span class="formula">Xavier: W ~ N(0, √(2/(fan_in + fan_out)))</span><span class="fdesc">Для tanh/sigmoid. Сохраняет дисперсию активаций одинаковой во всех слоях.</span></div>
+  <div class="fcard"><span class="formula">He (Kaiming): W ~ N(0, √(2/fan_in))</span><span class="fdesc">Для ReLU. Учитывает, что ReLU «убивает» половину нейронов. Используется в ResNet, GPT.</span></div>
+
+  <div class="callout blue">
+    <span class="ctag">// Инициализация нулями — особая ловушка</span>
+    <p>Если все веса = 0, все нейроны дают одинаковый выход → одинаковые градиенты → обучаются одинаково → нейроны «не специализируются». Это называется <strong>symmetry breaking problem</strong>. Случайность необходима!</p>
+  </div>
+</div>
+</section>
+
+<section id="reg">
+<div class="container reveal">
+  <span class="stag">// 02 — регуляризация</span>
+  <h2>Переобучение и как его победить</h2>
+  <p>Переобучение (<em>overfitting</em>) — модель «зазубрила» тренировочные данные, но не умеет обобщать. Нейросеть запомнила шум вместо паттернов. На тренировке Loss=0.01, на тесте Loss=5.0 — это переобучение.</p>
+
+  <div class="callout">
+    <span class="ctag">// L2 Regularization (Weight Decay)</span>
+    <p>Добавляем к Loss штраф за большие веса: <code>Loss_total = Loss + λ · Σ w²</code>. Это «давит» веса к нулю — модель не может «слишком сильно» запомнить любой конкретный признак. В AdamW (который использует LLaMA, GPT) это встроено как <code>weight_decay</code>.</p>
+  </div>
+  <div class="callout orange">
+    <span class="ctag">// L1 Regularization</span>
+    <p>Штраф: <code>λ · Σ |w|</code>. Создаёт <strong>разреженность</strong> — многие веса становятся точно 0. Полезно для feature selection, но редко используется в нейросетях напрямую.</p>
+  </div>
+</div>
+</section>
+
+<section id="dropout">
+<div class="container reveal">
+  <span class="stag">// 03 — dropout</span>
+  <h2>Dropout — случайное «выключение» нейронов</h2>
+  <p>Во время обучения каждый нейрон с вероятностью <em>p</em> (обычно 0.1–0.5) устанавливается в ноль. Сеть учится работать с «частичной информацией» → не может полагаться на конкретные нейроны → лучше обобщает.</p>
+
+  <div class="fcard">
+    <span class="formula">Dropout(x, p): каждый xᵢ → 0 с вероятностью p, иначе xᵢ/(1-p)</span>
+    <span class="fdesc">Деление на (1-p) — «inverted dropout»: сохраняет ожидаемое значение. При инференсе dropout отключается.</span>
+  </div>
+
+  <div class="callout">
+    <span class="ctag">// Dropout в трансформерах</span>
+    <p>В современных LLM Dropout используется осторожно (p=0.1) или вообще не используется при очень больших данных. Для GPT-3 — минимально. Для дообучения на малых датасетах — полезен. В Claude и LLaMA применяется <strong>Weight Decay</strong> как основная регуляризация.</p>
+  </div>
+</div>
+</section>
+
+<section id="practice">
+<div class="container reveal">
+  <span class="stag">// 04 — практика</span>
+  <h2>Сравниваем инициализации на практике</h2>
+  <div class="cblock">
+    <div class="cheader"><div class="cdots"><div class="cd cd-r"></div><div class="cd cd-y"></div><div class="cd cd-g"></div></div><span class="clang">Python · lesson_06.py</span></div>
+    <div class="cbody"><code><span class="cm"># Урок 6 — Инициализация весов и Dropout</span>
+<span class="kw">import</span> numpy <span class="kw">as</span> <span class="va">np</span>
+
+np.random.seed(<span class="num">0</span>)
+
+<span class="cm"># ─────────────────────────────────────────────
+# Функции инициализации
+# ─────────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">init_zeros</span>(shape):
+    <span class="kw">return</span> np.zeros(shape)
+
+<span class="kw">def</span> <span class="fn">init_large</span>(shape):
+    <span class="kw">return</span> np.random.randn(*shape) * <span class="num">10.0</span>
+
+<span class="kw">def</span> <span class="fn">init_xavier</span>(shape):
+    fan_in, fan_out = shape[<span class="num">0</span>], shape[<span class="num">1</span>]
+    std = np.sqrt(<span class="num">2.0</span> / (fan_in + fan_out))
+    <span class="kw">return</span> np.random.randn(*shape) * std
+
+<span class="kw">def</span> <span class="fn">init_he</span>(shape):
+    fan_in = shape[<span class="num">0</span>]
+    std = np.sqrt(<span class="num">2.0</span> / fan_in)
+    <span class="kw">return</span> np.random.randn(*shape) * std
+
+<span class="cm"># ─────────────────────────────────────────────
+# Симуляция forward pass через 10 слоёв
+# Смотрим на std активаций
+# ─────────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">simulate_forward</span>(init_fn, n_layers=<span class="num">10</span>, dim=<span class="num">256</span>):
+    x = np.random.randn(<span class="num">32</span>, dim)
+    stds = [x.std()]
+
+    <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(n_layers):
+        W = init_fn((dim, dim))
+        x = np.maximum(<span class="num">0</span>, x @ W)  <span class="cm"># ReLU</span>
+        stds.append(x.std())
+    <span class="kw">return</span> stds
+
+inits = {
+    <span class="str">'zeros'</span>:  (<span class="fn">init_zeros</span>,  <span class="str">"Нули — нет разнообразия"</span>),
+    <span class="str">'large'</span>:  (<span class="fn">init_large</span>,  <span class="str">"×10 — взрыв активаций"</span>),
+    <span class="str">'xavier'</span>: (<span class="fn">init_xavier</span>, <span class="str">"Xavier — стабильно"</span>),
+    <span class="str">'he'</span>:     (<span class="fn">init_he</span>,     <span class="str">"He — лучший для ReLU"</span>),
+}
+
+print(<span class="str">"STD активаций по слоям (хочем ~1.0 везде):"</span>)
+<span class="kw">for</span> name, (fn, desc) <span class="kw">in</span> inits.items():
+    stds = simulate_forward(fn)
+    stds_str = <span class="str">" → "</span>.join(<span class="str">f"{s:.2f}"</span> <span class="kw">for</span> s <span class="kw">in</span> stds[:<span class="num">5</span>])
+    print(<span class="str">f"{name:8s}: {stds_str}  | {desc}"</span>)
+
+<span class="cm"># ─────────────────────────────────────────────
+# Dropout
+# ─────────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">dropout</span>(x, p=<span class="num">0.3</span>, training=<span class="kw">True</span>):
+    <span class="str">"""Inverted dropout. p — вероятность обнулить нейрон."""</span>
+    <span class="kw">if</span> <span class="kw">not</span> training:
+        <span class="kw">return</span> x  <span class="cm"># при инференсе не применяем</span>
+    mask = np.random.rand(*x.shape) > p
+    <span class="kw">return</span> x * mask / (<span class="num">1.0</span> - p)  <span class="cm"># inverted: масштабируем обратно</span>
+
+<span class="cm"># Тест: среднее значение должно оставаться ~одинаковым</span>
+x_test = np.ones((<span class="num">10000</span>,))
+print(<span class="str">f"\nDropout test (p=0.3):"</span>)
+print(<span class="str">f"  До dropout:  mean={x_test.mean():.3f}"</span>)
+print(<span class="str">f"  После (train): mean={dropout(x_test, p=0.3, training=True).mean():.3f}"</span>)
+print(<span class="str">f"  После (infer): mean={dropout(x_test, p=0.3, training=False).mean():.3f}"</span>)
+
+<span class="cm"># ─────────────────────────────────────────────
+# L2 регуляризация в Loss
+# ─────────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">loss_with_l2</span>(predictions, targets, weights_list, lam=<span class="num">0.01</span>):
+    mse = ((predictions - targets) ** <span class="num">2</span>).mean()
+    l2  = sum((w**<span class="num">2</span>).sum() <span class="kw">for</span> w <span class="kw">in</span> weights_list)
+    <span class="kw">return</span> mse + lam * l2
+
+W1 = init_he((<span class="num">4</span>, <span class="num">8</span>));  W2 = init_he((<span class="num">8</span>, <span class="num">1</span>))
+pred = np.random.rand(<span class="num">10</span>);  tgt = np.random.rand(<span class="num">10</span>)
+print(<span class="str">f"\nL2 regularization:"</span>)
+print(<span class="str">f"  MSE only:      {((pred-tgt)**2).mean():.4f}"</span>)
+print(<span class="str">f"  MSE + L2(0.01): {loss_with_l2(pred, tgt, [W1, W2], 0.01):.4f}"</span>)</code></div>
+  </div>
+  <div class="callout">
+    <span class="ctag">// Ожидаемый результат</span>
+    <p>Xavier и He должны показать STD ≈1.0 через все слои. Zeros — STD=0.0 сразу. Large — огромные числа, потом NaN. Это объясняет, почему правильная инициализация = обязательное требование, не опция.</p>
+  </div>
+</div>
+</section>
+
+<section id="hw">
+<div class="container reveal">
+  <span class="stag">// 05 — задания</span>
+  <h2>Задания к Дню 7</h2>
+  <ul class="tasks">
+    <li><div class="tnum">01</div><div class="ttxt"><strong>Запустите lesson_06.py.</strong> Добавьте инициализацию <code>init_small</code> (стд=0.001). Опишите поведение STD активаций.</div></li>
+    <li><div class="tnum">02</div><div class="ttxt"><strong>Возьмите нейросеть из Дня 5 (XOR)</strong> и попробуйте три инициализации: нулевую, He, Xavier. Как быстро сходится каждая? Запишите эпоху, когда Loss достиг 0.1.</div></li>
+    <li><div class="tnum">03</div><div class="ttxt"><strong>Добавьте L2-регуляризацию в обратное распространение.</strong> Градиент L2 по весу w = 2λw. Добавьте это к dW1 и dW2 в backward методе из Дня 5.</div></li>
+    <li><div class="tnum">★</div><div class="ttxt"><strong>[Продвинутое]</strong> Реализуйте <strong>Layer Normalization</strong> (не BatchNorm): нормализует активации по фичам одного примера. Формула: <code>(x - mean) / std * gamma + beta</code>. Именно LayerNorm используется в трансформерах.</div></li>
+  </ul>
+  <div class="quiz">
+    <div class="quiz-q">🧠 Почему нельзя инициализировать все веса нулями?</div>
+    <div class="qopts">
+      <button class="qopt" onclick="qa(this,false)">A) Матричные умножения работают медленнее с нулями</button>
+      <button class="qopt" onclick="qa(this,true)">B) Все нейроны получают одинаковые градиенты и не специализируются</button>
+      <button class="qopt" onclick="qa(this,false)">C) Нулевые веса вызывают деление на ноль</button>
+      <button class="qopt" onclick="qa(this,false)">D) Gradients становятся NaN</button>
+    </div>
+    <div class="qfb" id="qfb"></div>
+  </div>
+  <div style="border-top:1px solid var(--border);margin-top:2.5rem;padding-top:2rem;">
+    <span class="stag">// следующий урок</span>
+    <h3>День 7 — Backpropagation вглубину</h3>
+    <p style="color:var(--muted);font-size:.88rem;">Chain rule через 5+ слоёв. Vanishing и exploding gradients. Gradient clipping. Реализуем autograd-движок на 50 строках — упрощённый PyTorch.</p>
+  </div>
+</div>
+</section>
+
+<footer><p>КУРС <span>«90 ДНЕЙ ДО СОБСТВЕННОЙ LLM»</span> · ДЕНЬ <span>06</span> / 90</p></footer>
+
+<script>
+window.addEventListener('scroll',()=>{document.getElementById('prog').style.width=(window.scrollY/(document.body.scrollHeight-window.innerHeight)*100)+'%';});
+const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('revealed');}),{threshold:.08});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+document.querySelectorAll('.ndot').forEach(d=>d.addEventListener('click',e=>{e.preventDefault();document.getElementById(d.dataset.s)?.scrollIntoView({behavior:'smooth'});}));
+
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function relu(x){return Math.max(0,x);}
+
+const initFns={
+  zeros:{fn:(d)=>Array(d).fill(0),color:'#ef4444',label:'Инициализация нулями',msg:'STD=0 сразу — нет разнообразия, нет обучения.'},
+  large:{fn:(d)=>Array.from({length:d},()=>randn()*10),color:'#fb923c',label:'Слишком большие (×10)',msg:'Взрыв активаций → NaN через несколько слоёв.'},
+  small:{fn:(d)=>Array.from({length:d},()=>randn()*0.001),color:'#f59e0b',label:'Слишком малые (×0.001)',msg:'Сигнал затухает → градиенты ≈ 0 → обучение стоит.'},
+  xavier:{fn:(d)=>Array.from({length:d},()=>randn()*Math.sqrt(2/(d+d))),color:'#38bdf8',label:'Xavier инициализация',msg:'Стабильный STD ≈ 1 через все слои. Хорошо для tanh/sigmoid.'},
+  he:{fn:(d)=>Array.from({length:d},()=>randn()*Math.sqrt(2/d)),color:'#22c55e',label:'He (Kaiming) инициализация',msg:'Лучший для ReLU. Учитывает мёртвые нейроны (50% при ReLU → множим на √2).'}
+};
+
+function simulateLayers(initFn,layers=8,dim=64){
+  let x=Array.from({length:32},()=>Array.from({length:dim},()=>randn()));
+  const stds=[stdOf(x.flat())];
+  for(let l=0;l<layers;l++){
+    const W=Array.from({length:dim},()=>initFn(dim));
+    x=x.map(row=>W.map(col=>row.reduce((s,v,i)=>s+v*col[i],0)).map(v=>relu(v)));
+    stds.push(stdOf(x.flat()));
+  }
+  return stds;
+}
+
+function stdOf(arr){const m=arr.reduce((a,b)=>a+b,0)/arr.length;return Math.sqrt(arr.reduce((s,v)=>s+(v-m)**2,0)/arr.length);}
+
+function drawHist(name){
+  const cv=document.getElementById('histCanvas'),ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#0b120e';ctx.fillRect(0,0,W,H);
+  const info=initFns[name];
+  const stds=simulateLayers(info.fn);
+  const maxS=Math.max(...stds.filter(s=>isFinite(s)&&s<1000))||1;
+  const padL=40,padR=20,padT=20,padB=30,cW=W-padL-padR,cH=H-padT-padB;
+  ctx.strokeStyle='#162019';ctx.lineWidth=1;
+  [0,.25,.5,.75,1].forEach(f=>{const y=padT+cH-f*cH;ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-padR,y);ctx.stroke();ctx.fillStyle='#2a4030';ctx.font='10px JetBrains Mono';ctx.fillText((f*maxS).toFixed(2),2,y+4);});
+  const n=stds.length;ctx.strokeStyle=info.color;ctx.lineWidth=2.5;ctx.beginPath();
+  stds.forEach((s,i)=>{const x=padL+i*cW/(n-1||1);const sv=isFinite(s)&&s<1000?s:maxS;const y=padT+cH-sv/maxS*cH;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();
+  stds.forEach((s,i)=>{const x=padL+i*cW/(n-1||1);const sv=isFinite(s)&&s<1000?s:maxS;const y=padT+cH-sv/maxS*cH;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fillStyle=info.color;ctx.fill();});
+  ctx.fillStyle='#4a6b56';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+  stds.forEach((_,i)=>{ctx.fillText('L'+i,padL+i*cW/(n-1||1),H-5);});
+  document.getElementById('initInfo').textContent=info.label+' | '+info.msg;
+}
+
+function setInit(name){
+  document.querySelectorAll('.htab').forEach((t,i)=>t.classList.toggle('on',['zeros','large','small','xavier','he'][i]===name));
+  drawHist(name);
+}
+drawHist('zeros');
+
+function qa(btn,correct){
+  document.querySelectorAll('.qopt').forEach(b=>{b.disabled=true;b.classList.remove('right','wrong');});
+  btn.classList.add(correct?'right':'wrong');
+  if(!correct)document.querySelectorAll('.qopt')[1].classList.add('right');
+  const fb=document.getElementById('qfb');fb.style.display='block';
+  fb.style.color=correct?'#4ade80':'#f87171';
+  fb.textContent=correct?'✓ Верно! Симметрия не нарушается: все нейроны вычисляют одно и то же → получают одинаковые градиенты → обновляются одинаково. Нейросеть не обучается.':'✗ Правильный ответ B. Все нейроны симметричны → одинаковые градиенты → специализации нет.';
+}
+</script>
+</body>
+</html>
